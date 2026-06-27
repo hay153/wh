@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小怪兽跳跃游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+        .game-container {
+            text-align: center;
+        }
+        #gameCanvas {
+            border: 4px solid #4a90d9;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(74, 144, 217, 0.3);
+            cursor: pointer;
+        }
+        .info {
+            color: #fff;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        .info p {
+            margin: 8px 0;
+        }
+        .score-display {
+            color: #ffd700;
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas" width="900" height="500"></canvas>
+        <div class="score-display">距离: <span id="score">0</span>m</div>
+        <div class="info">
+            <p>🎮 <strong>← →</strong> 或 <strong>A D</strong> 左右移动 | <strong>空格/W/↑</strong> 跳跃（可二段跳）</p>
+            <p>⭐ 特殊平台：黄色弹簧↑↑、灰色易碎、蓝色冰面❄、粉色云朵、紫色⟷左右移动</p>
+            <p>🔄 按 <strong>R键</strong> 重新开始</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+
+        // 游戏状态
+        let gameOver = false;
+        let score = 0;
+        let gameStarted = false;
+        let cameraX = 0;
+        let lastPlatformX = 0;
+
+        // 按键状态
+        const keys = {
+            left: false,
+            right: false,
+            up: false
+        };
+
+        // 小怪兽属性
+        const monster = {
+            x: 150,
+            y: 300,
+            width: 50,
+            height: 50,
+            velocityX: 0,
+            velocityY: 0,
+            speed: 4,
+            maxSpeed: 6,
+            jumping: false,
+            jumpPower: -16,
+            gravity: 0.6,
+            color: '#7c3aed',
+            eyeColor: '#fff',
+            mouthOpen: false,
+            jumpCount: 0,
+            maxJumps: 2,
+            facingRight: true
+        };
+
+        // 平台数组
+        let platforms = [];
+
+        // 障碍物数组
+        let obstacles = [];
+
+        // 金币数组
+        let coins = [];
+
+        // 背景星星
+        let stars = [];
+        for (let i = 0; i < 100; i++) {
+            stars.push({
+                x: Math.random() * 3000,
+                y: Math.random() * 300,
+                size: Math.random() * 2 + 1,
+                speed: Math.random() * 0.5 + 0.2
+            });
+        }
+
+        // 云朵
+        let clouds = [];
+        for (let i = 0; i < 15; i++) {
+            clouds.push({
+                x: Math.random() * 3000,
+                y: Math.random() * 150 + 50,
+                width: Math.random() * 80 + 60,
+                speed: Math.random() * 0.3 + 0.1
+            });
+        }
+
+        // 初始化平台
+        function initPlatforms() {
+            platforms = [];
+            obstacles = [];
+            coins = [];
+            
+            // 起始平台
+            platforms.push({ x: 0, y: 450, width: 400, height: 50, type: 'ground' });
+            
+            lastPlatformX = 400;
+            
+            // 生成初始平台
+            for (let i = 0; i < 15; i++) {
+                generatePlatform();
+            }
+        }
+
+        // 生成平台
+        function generatePlatform() {
+            const gap = Math.random() * 120 + 100;
+            const width = Math.random() * 180 + 120;
+            const heightVariation = Math.random() * 100 - 50;
+            
+            let y = 350 + heightVariation;
+            if (y > 420) y = 420;
+            if (y < 200) y = 200;
+            
+            // 多元化平台类型
+            const platformTypes = ['normal', 'moving', 'spring', 'crumbling', 'ice', 'cloud', 'horizontal', 'small', 'large'];
+            const typeWeights = [0.25, 0.12, 0.12, 0.08, 0.08, 0.08, 0.12, 0.12, 0.05];
+            
+            // 根据权重随机选择平台类型
+            let totalWeight = typeWeights.reduce((a, b) => a + b, 0);
+            let random = Math.random() * totalWeight;
+            let platformType = 'normal';
+            let weightSum = 0;
+            
+            for (let i = 0; i < platformTypes.length; i++) {
+                weightSum += typeWeights[i];
+                if (random <= weightSum) {
+                    platformType = platformTypes[i];
+                    break;
+                }
+            }
+            
+            // 根据类型调整宽度
+            let finalWidth = width;
+            if (platformType === 'small') {
+                finalWidth = Math.random() * 60 + 40;
+            } else if (platformType === 'large') {
+                finalWidth = Math.random() * 100 + 200;
+            }
+            
+            const platform = {
+                x: lastPlatformX + gap,
+                y: y,
+                width: finalWidth,
+                height: platformType === 'cloud' ? 15 : 20,
+                type: platformType,
+                originalY: y,
+                originalX: lastPlatformX + gap,
+                moveDirection: 1,
+                moveRange: 50,
+                horizontalDirection: 1,
+                horizontalRange: 80,
+                crumbleTimer: 0,
+                crumbleTime: 15,
+                isCrumbling: false,
+                cloudTimer: 0,
+                cloudTime: 20,
+                isCloudFading: false,
+                iceSlip: 1.5
+            };
+            
+            platforms.push(platform);
+            
+            // 随机添加障碍物（不在特殊平台上）
+            if (Math.random() > 0.75 && platforms.length > 3 && 
+                platformType !== 'spring' && platformType !== 'crumbling' && platformType !== 'cloud') {
+                obstacles.push({
+                    x: lastPlatformX + gap + finalWidth / 2 - 15,
+                    y: y - 25,
+                    width: 30,
+                    height: 25
+                });
+            }
+            
+            // 随机添加金币
+            if (Math.random() > 0.5) {
+                coins.push({
+                    x: lastPlatformX + gap + finalWidth / 2,
+                    y: platformType === 'spring' ? y - 80 : y - 60,
+                    radius: 12,
+                    collected: false
+                });
+            }
+            
+            lastPlatformX += gap + finalWidth;
+        }
+
+        // 绘制小怪兽
+        function drawMonster() {
+            const screenX = monster.x - cameraX;
+            
+            ctx.save();
+            
+            if (!monster.facingRight) {
+                ctx.translate(screenX + monster.width, monster.y);
+                ctx.scale(-1, 1);
+                ctx.translate(0, -monster.y);
+            }
+            
+            const drawX = monster.facingRight ? screenX : -monster.width;
+            
+            // 身体
+            ctx.fillStyle = monster.color;
+            ctx.beginPath();
+            ctx.roundRect(drawX, monster.y, monster.width, monster.height, 15);
+            ctx.fill();
+            
+            // 身体阴影
+            ctx.fillStyle = '#6d28d9';
+            ctx.beginPath();
+            ctx.roundRect(drawX + 5, monster.y + 5, monster.width - 10, monster.height - 10, 12);
+            ctx.fill();
+            
+            // 眼睛
+            ctx.fillStyle = monster.eyeColor;
+            ctx.beginPath();
+            ctx.arc(drawX + 15, monster.y + 18, 8, 0, Math.PI * 2);
+            ctx.arc(drawX + 35, monster.y + 18, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 瞳孔
+            ctx.fillStyle = '#000';
+            const pupilOffset = monster.facingRight ? 2 : -2;
+            ctx.beginPath();
+            ctx.arc(drawX + 15 + pupilOffset, monster.y + 18, 4, 0, Math.PI * 2);
+            ctx.arc(drawX + 35 + pupilOffset, monster.y + 18, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 嘴巴
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            if (monster.jumping || monster.mouthOpen) {
+                ctx.arc(drawX + 25, monster.y + 38, 8, 0, Math.PI);
+            } else {
+                ctx.arc(drawX + 25, monster.y + 32, 10, 0.2, Math.PI - 0.2);
+            }
+            ctx.stroke();
+            
+            // 角
+            ctx.fillStyle = '#a855f7';
+            ctx.beginPath();
+            ctx.moveTo(drawX + 10, monster.y + 5);
+            ctx.lineTo(drawX + 5, monster.y - 10);
+            ctx.lineTo(drawX + 18, monster.y + 5);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(drawX + 32, monster.y + 5);
+            ctx.lineTo(drawX + 45, monster.y - 10);
+            ctx.lineTo(drawX + 40, monster.y + 5);
+            ctx.fill();
+            
+            ctx.restore();
+        }
+
+        // 绘制平台
+        function drawPlatforms() {
+            platforms.forEach(platform => {
+                const screenX = platform.x - cameraX;
+                if (screenX > canvas.width + 50 || screenX + platform.width < -50) return;
+                
+                // 根据平台类型使用不同的鲜亮颜色
+                let platformColor;
+                let glowColor;
+                
+                switch (platform.type) {
+                    case 'ground':
+                        platformColor = '#81c784';  // 鲜绿色
+                        glowColor = '#a5d6a7';
+                        break;
+                    case 'normal':
+                        platformColor = '#4db6ac';  // 青绿色
+                        glowColor = '#80cbc4';
+                        break;
+                    case 'moving':
+                        platformColor = '#ff7043';  // 鲜橙色
+                        glowColor = '#ff8a65';
+                        break;
+                    case 'horizontal':
+                        platformColor = '#ab47bc';  // 紫色
+                        glowColor = '#ba68c8';
+                        break;
+                    case 'spring':
+                        platformColor = '#ffeb3b';  // 黄色
+                        glowColor = '#fff176';
+                        break;
+                    case 'crumbling':
+                        platformColor = platform.isCrumbling ? '#ef5350' : '#78909c';  // 灰色（碎裂时变红）
+                        glowColor = platform.isCrumbling ? '#ef9a9a' : '#90a4ae';
+                        break;
+                    case 'ice':
+                        platformColor = '#64b5f6';  // 蓝色
+                        glowColor = '#90caf9';
+                        break;
+                    case 'cloud':
+                        const alpha = 1 - (platform.cloudTimer / platform.cloudTime);
+                        platformColor = `rgba(236, 64, 122, ${alpha})`;  // 粉色半透明
+                        glowColor = `rgba(240, 98, 146, ${alpha})`;
+                        break;
+                    case 'small':
+                        platformColor = '#26c6da';  // 青色
+                        glowColor = '#4dd0e1';
+                        break;
+                    case 'large':
+                        platformColor = '#66bb6a';  // 绿色
+                        glowColor = '#81c784';
+                        break;
+                    default:
+                        platformColor = '#4db6ac';
+                        glowColor = '#80cbc4';
+                }
+                
+                // 绘制平台主体
+                ctx.fillStyle = platformColor;
+                
+                if (platform.type === 'spring') {
+                    // 弹簧平台：绘制弹簧效果
+                    ctx.fillRect(screenX, platform.y, platform.width, platform.height);
+                    ctx.fillStyle = '#fdd835';
+                    ctx.fillRect(screenX + 10, platform.y + 5, platform.width - 20, 10);
+                    // 弹簧图标
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('↑↑', screenX + platform.width / 2, platform.y + platform.height - 5);
+                } else if (platform.type === 'ice') {
+                    // 冰面平台：绘制冰晶效果
+                    ctx.fillRect(screenX, platform.y, platform.width, platform.height);
+                    // 冰晶装饰
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                    for (let i = screenX + 15; i < screenX + platform.width - 15; i += 20) {
+                        ctx.beginPath();
+                        ctx.moveTo(i, platform.y + 5);
+                        ctx.lineTo(i + 5, platform.y);
+                        ctx.lineTo(i + 10, platform.y + 5);
+                        ctx.fill();
+                    }
+                    ctx.fillText('❄', screenX + platform.width / 2, platform.y - 5);
+                } else if (platform.type === 'cloud') {
+                    // 云朵平台：绘制云朵形状
+                    ctx.beginPath();
+                    ctx.arc(screenX + platform.width * 0.25, platform.y + platform.height / 2, platform.width * 0.2, 0, Math.PI * 2);
+                    ctx.arc(screenX + platform.width * 0.5, platform.y + platform.height / 2, platform.width * 0.25, 0, Math.PI * 2);
+                    ctx.arc(screenX + platform.width * 0.75, platform.y + platform.height / 2, platform.width * 0.2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (platform.type === 'crumbling') {
+                    // 易碎平台：绘制裂纹效果
+                    ctx.fillRect(screenX, platform.y, platform.width, platform.height);
+                    if (platform.isCrumbling) {
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(screenX + platform.width * 0.3, platform.y);
+                        ctx.lineTo(screenX + platform.width * 0.5, platform.y + platform.height);
+                        ctx.moveTo(screenX + platform.width * 0.7, platform.y);
+                        ctx.lineTo(screenX + platform.width * 0.6, platform.y + platform.height);
+                        ctx.stroke();
+                    }
+                } else {
+                    // 普通平台
+                    ctx.fillRect(screenX, platform.y, platform.width, platform.height);
+                }
+                
+                // 高光效果
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.fillRect(screenX, platform.y, platform.width, 6);
+                
+                // 底部阴影
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+                ctx.fillRect(screenX, platform.y + platform.height - 3, platform.width, 3);
+                
+                // 特殊平台图标提示
+                if (platform.type === 'horizontal') {
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('⟷', screenX + platform.width / 2, platform.y + platform.height - 5);
+                }
+                
+                // 地面花朵装饰
+                if (platform.type === 'ground') {
+                    const flowerColors = ['#ff4081', '#ffeb3b', '#00bcd4', '#9c27b0'];
+                    for (let i = screenX; i < screenX + platform.width; i += 20) {
+                        ctx.fillStyle = flowerColors[Math.floor(Math.random() * flowerColors.length)];
+                        ctx.beginPath();
+                        ctx.arc(i + 10, platform.y - 5, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            });
+        }
+
+        // 绘制障碍物
+        function drawObstacles() {
+            obstacles.forEach(obstacle => {
+                const screenX = obstacle.x - cameraX;
+                if (screenX > canvas.width + 50 || screenX + obstacle.width < -50) return;
+                
+                // 鲜亮的障碍物主体
+                ctx.fillStyle = '#f44336';
+                ctx.beginPath();
+                ctx.moveTo(screenX + obstacle.width / 2, obstacle.y);
+                ctx.lineTo(screenX + obstacle.width, obstacle.y + obstacle.height);
+                ctx.lineTo(screenX, obstacle.y + obstacle.height);
+                ctx.closePath();
+                ctx.fill();
+                
+                // 障碍物高光
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.beginPath();
+                ctx.moveTo(screenX + obstacle.width / 2, obstacle.y);
+                ctx.lineTo(screenX + obstacle.width, obstacle.y + obstacle.height / 2);
+                ctx.lineTo(screenX, obstacle.y + obstacle.height / 2);
+                ctx.closePath();
+                ctx.fill();
+                
+                // 危险标志（鲜亮）
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚠', screenX + obstacle.width / 2, obstacle.y + obstacle.height - 7);
+            });
+        }
+
+        // 绘制金币
+        function drawCoins() {
+            coins.forEach(coin => {
+                if (coin.collected) return;
+                
+                const screenX = coin.x - cameraX;
+                if (screenX > canvas.width + 50 || screenX < -50) return;
+                
+                // 金币外圈
+                ctx.fillStyle = '#ffeb3b';
+                ctx.beginPath();
+                ctx.arc(screenX, coin.y, coin.radius + 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 金币主体
+                ctx.fillStyle = '#ffc107';
+                ctx.beginPath();
+                ctx.arc(screenX, coin.y, coin.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 金币内圈高光
+                ctx.fillStyle = '#ffca28';
+                ctx.beginPath();
+                ctx.arc(screenX - 2, coin.y - 2, coin.radius - 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 金币光晕
+                ctx.fillStyle = 'rgba(255, 235, 59, 0.4)';
+                ctx.beginPath();
+                ctx.arc(screenX, coin.y, coin.radius + 6, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // 绘制背景
+        function drawBackground() {
+            // 鲜亮的天空渐变
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#ff9a9e');  // 粉红色
+            gradient.addColorStop(0.25, '#ffecd2'); // 浅橙色
+            gradient.addColorStop(0.5, '#a8edea'); // 浅蓝色
+            gradient.addColorStop(0.75, '#fed6e3'); // 浅粉色
+            gradient.addColorStop(1, '#d299c2');  // 淡紫色
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制太阳
+            const sunX = canvas.width - 100 - cameraX * 0.05;
+            ctx.fillStyle = '#ffd700';
+            ctx.beginPath();
+            ctx.arc(sunX % (canvas.width + 200), 80, 50, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 太阳光晕
+            ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+            ctx.beginPath();
+            ctx.arc(sunX % (canvas.width + 200), 80, 70, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 彩色云朵
+            clouds.forEach((cloud, index) => {
+                const screenX = cloud.x - cameraX * cloud.speed;
+                if (screenX > canvas.width + 100 || screenX < -cloud.width - 50) return;
+                
+                // 不同颜色的云朵
+                const colors = ['#ffffff', '#ffe4e1', '#e0f7fa', '#fff9c4', '#f8bbd9'];
+                ctx.fillStyle = colors[index % colors.length];
+                
+                ctx.beginPath();
+                ctx.arc(screenX, cloud.y, cloud.width / 3, 0, Math.PI * 2);
+                ctx.arc(screenX + cloud.width / 3, cloud.y - 10, cloud.width / 4, 0, Math.PI * 2);
+                ctx.arc(screenX + cloud.width / 2, cloud.y, cloud.width / 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // 彩色星星/光点
+            const starColors = ['#ffeb3b', '#ff4081', '#00bcd4', '#9c27b0', '#4caf50', '#ff9800'];
+            stars.forEach((star, index) => {
+                const screenX = star.x - cameraX * star.speed;
+                if (screenX > canvas.width + 10 || screenX < -10) return;
+                
+                ctx.fillStyle = starColors[index % starColors.length];
+                ctx.beginPath();
+                ctx.arc(screenX % canvas.width, star.y, star.size + 1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 光晕效果
+                ctx.fillStyle = starColors[index % starColors.length] + '40';
+                ctx.beginPath();
+                ctx.arc(screenX % canvas.width, star.y, star.size + 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // 底部装饰性波浪
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height - 50 + i * 10);
+                for (let x = 0; x < canvas.width; x += 50) {
+                    const y = canvas.height - 50 + i * 10 + Math.sin((x + cameraX * 0.5) / 50) * 10;
+                    ctx.lineTo(x, y);
+                }
+                ctx.lineTo(canvas.width, canvas.height);
+                ctx.lineTo(0, canvas.height);
+                ctx.fill();
+            }
+        }
+
+        // 跳跃
+        function jump() {
+            if (!gameOver && monster.jumpCount < monster.maxJumps) {
+                monster.velocityY = monster.jumpPower;
+                monster.jumping = true;
+                monster.jumpCount++;
+                monster.mouthOpen = true;
+                setTimeout(() => monster.mouthOpen = false, 200);
+                if (!gameStarted) gameStarted = true;
+            }
+        }
+
+        // 碰撞检测
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        // 圆形碰撞检测
+        function checkCircleCollision(circle, rect) {
+            const distX = Math.abs(circle.x - rect.x - rect.width / 2);
+            const distY = Math.abs(circle.y - rect.y - rect.height / 2);
+            
+            if (distX > (rect.width / 2 + circle.radius)) return false;
+            if (distY > (rect.height / 2 + circle.radius)) return false;
+            
+            return true;
+        }
+
+        // 更新游戏状态
+        function update() {
+            if (gameOver || !gameStarted) return;
+            
+            // 处理移动方向
+            if (keys.left) {
+                // 向左跑
+                monster.velocityX = Math.max(monster.velocityX - 0.4, -monster.speed);
+                monster.facingRight = false;
+            } else if (keys.right) {
+                // 向右加速跑
+                monster.velocityX = Math.min(monster.velocityX + 0.2, monster.maxSpeed);
+                monster.facingRight = true;
+            } else {
+                // 不按键时，自动向前跑
+                monster.velocityX = Math.min(monster.velocityX + 0.15, monster.speed);
+                monster.facingRight = true;
+            }
+            
+            // 应用重力
+            monster.velocityY += monster.gravity;
+            
+            // 更新位置
+            monster.x += monster.velocityX;
+            monster.y += monster.velocityY;
+            
+            // 更新相机
+            const targetCameraX = monster.x - 300;
+            // 相机跟随小怪兽（向前时跟随，后退时也跟随但不超过最远位置）
+            if (monster.x - cameraX < 150) {
+                // 当小怪兽靠近屏幕左侧时，相机也向左跟随
+                cameraX = Math.max(0, monster.x - 150);
+            } else {
+                cameraX = Math.max(cameraX, targetCameraX);
+            }
+            
+            // 更新分数（距离）
+            score = Math.floor(monster.x / 10);
+            scoreElement.textContent = score;
+            
+            // 生成新平台
+            while (lastPlatformX < cameraX + canvas.width + 500) {
+                generatePlatform();
+            }
+            
+            // 清理过远的元素
+            platforms = platforms.filter(p => p.x + p.width > cameraX - 100);
+            obstacles = obstacles.filter(o => o.x + o.width > cameraX - 100);
+            coins = coins.filter(c => c.x > cameraX - 100);
+            
+            // 更新移动平台
+            platforms.forEach(platform => {
+                if (platform.type === 'moving') {
+                    // 上下移动
+                    platform.y += platform.moveDirection * 1.5;
+                    if (Math.abs(platform.y - platform.originalY) > platform.moveRange) {
+                        platform.moveDirection *= -1;
+                    }
+                } else if (platform.type === 'horizontal') {
+                    // 左右移动
+                    platform.x += platform.horizontalDirection * 1.5;
+                    if (Math.abs(platform.x - platform.originalX) > platform.horizontalRange) {
+                        platform.horizontalDirection *= -1;
+                    }
+                } else if (platform.type === 'crumbling' && platform.isCrumbling) {
+                    // 易碎平台计时器
+                    platform.crumbleTimer++;
+                    if (platform.crumbleTimer > platform.crumbleTime) {
+                        platform.height = 0;  // 让平台消失
+                    }
+                } else if (platform.type === 'cloud' && platform.isCloudFading) {
+                    // 云朵平台计时器
+                    platform.cloudTimer++;
+                    if (platform.cloudTimer > platform.cloudTime) {
+                        platform.height = 0;  // 让平台消失
+                    }
+                }
+            });
+            
+            // 平台碰撞检测
+            let onPlatform = false;
+            let onIcePlatform = false;
+            let currentPlatformType = null;
+            
+            platforms.forEach(platform => {
+                // 检查平台是否有效
+                if (platform.height <= 0) return;
+                
+                if (monster.velocityY > 0 && checkCollision(monster, platform)) {
+                    if (monster.y + monster.height - monster.velocityY <= platform.y) {
+                        monster.y = platform.y - monster.height;
+                        
+                        // 根据平台类型应用特殊效果
+                        if (platform.type === 'spring') {
+                            // 弹簧平台：超级弹跳
+                            monster.velocityY = monster.jumpPower * 1.8;  // 弹得更高
+                            monster.jumping = true;
+                            monster.jumpCount = 0;
+                            monster.mouthOpen = true;
+                            setTimeout(() => monster.mouthOpen = false, 300);
+                        } else if (platform.type === 'crumbling') {
+                            // 易碎平台：开始碎裂
+                            platform.isCrumbling = true;
+                            monster.velocityY = 0;
+                            monster.jumping = false;
+                            monster.jumpCount = 0;
+                        } else if (platform.type === 'ice') {
+                            // 冰面平台：不减速
+                            monster.velocityY = 0;
+                            monster.jumping = false;
+                            monster.jumpCount = 0;
+                            onIcePlatform = true;
+                            currentPlatformType = 'ice';
+                        } else if (platform.type === 'cloud') {
+                            // 云朵平台：开始消失
+                            platform.isCloudFading = true;
+                            monster.velocityY = 0;
+                            monster.jumping = false;
+                            monster.jumpCount = 0;
+                        } else if (platform.type === 'horizontal') {
+                            // 左右移动平台：跟随平台移动
+                            monster.x += platform.horizontalDirection * 1.5;
+                            monster.velocityY = 0;
+                            monster.jumping = false;
+                            monster.jumpCount = 0;
+                        } else if (platform.type === 'moving') {
+                            //上下移动平台：跟随平台移动
+                            monster.y += platform.moveDirection * 1.5;
+                            monster.velocityY = 0;
+                            monster.jumping = false;
+                            monster.jumpCount = 0;
+                        } else {
+                            // 普通平台
+                            monster.velocityY = 0;
+                            monster.jumping = false;
+                            monster.jumpCount = 0;
+                        }
+                        
+                        onPlatform = true;
+                    }
+                }
+            });
+            
+            // 冰面平台滑动效果
+            if (onIcePlatform && !keys.left && !keys.right) {
+                // 在冰面上保持滑动，稍微加速
+                monster.velocityX *= 1.01;
+            }
+            
+            // 障碍物碰撞检测
+            obstacles.forEach(obstacle => {
+                if (checkCollision(monster, obstacle)) {
+                    gameOver = true;
+                }
+            });
+            
+            // 金币收集
+            coins.forEach(coin => {
+                if (!coin.collected) {
+                    const coinRect = { x: coin.x - coin.radius, y: coin.y - coin.radius, width: coin.radius * 2, height: coin.radius * 2 };
+                    if (checkCollision(monster, coinRect)) {
+                        coin.collected = true;
+                        score += 50;
+                    }
+                }
+            });
+            
+            // 掉落检测
+            if (monster.y > canvas.height + 50) {
+                gameOver = true;
+            }
+            
+            // 左边界检测（不能跑出相机左侧）
+            if (monster.x < cameraX + 50) {
+                monster.x = cameraX + 50;
+                monster.velocityX = Math.max(0, monster.velocityX);
+            }
+        }
+
+        // 绘制游戏结束画面
+        function drawGameOver() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 48px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('游戏结束!', canvas.width / 2, canvas.height / 2 - 50);
+            
+            ctx.font = '28px Arial';
+            ctx.fillStyle = '#ffd700';
+            ctx.fillText(`跑了 ${score} 米`, canvas.width / 2, canvas.height / 2 + 10);
+            
+            ctx.font = '20px Arial';
+            ctx.fillStyle = '#fff';
+            ctx.fillText('按 R 键重新开始', canvas.width / 2, canvas.height / 2 + 60);
+        }
+
+        // 绘制开始画面
+        function drawStartScreen() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 52px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('小怪兽跑酷', canvas.width / 2, canvas.height / 2 - 80);
+            
+            ctx.font = '22px Arial';
+            ctx.fillStyle = '#ffd700';
+            ctx.fillText('← → 或 A D 控制左右移动', canvas.width / 2, canvas.height / 2 - 30);
+            ctx.fillText('空格/W/↑ 键跳跃（可二段跳）', canvas.width / 2, canvas.height / 2 + 5);
+            
+            ctx.font = '18px Arial';
+            ctx.fillStyle = '#4ecdc4';
+            ctx.fillText('特殊平台：弹簧↑↑(黄色)、易碎(灰色)、冰面❄(蓝色)', canvas.width / 2, canvas.height / 2 + 40);
+            ctx.fillText('云朵(粉色)、左右移动⟷(紫色)、大平台、小平台', canvas.width / 2, canvas.height / 2 + 65);
+            
+            ctx.font = '20px Arial';
+            ctx.fillStyle = '#fff';
+            ctx.fillText('点击屏幕或按任意键开始', canvas.width / 2, canvas.height / 2 + 110);
+        }
+
+        // 游戏主循环
+        function gameLoop() {
+            // 绘制背景
+            drawBackground();
+            
+            // 绘制平台
+            drawPlatforms();
+            
+            // 绘制金币
+            drawCoins();
+            
+            // 绘制障碍物
+            drawObstacles();
+            
+            // 更新游戏状态
+            update();
+            
+            // 绘制小怪兽
+            drawMonster();
+            
+            // 显示开始画面
+            if (!gameStarted) {
+                drawStartScreen();
+            }
+            
+            // 显示游戏结束画面
+            if (gameOver) {
+                drawGameOver();
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 重置游戏
+        function resetGame() {
+            monster.x = 150;
+            monster.y = 300;
+            monster.velocityX = 0;
+            monster.velocityY = 0;
+            monster.jumping = false;
+            monster.jumpCount = 0;
+            monster.facingRight = true;
+            cameraX = 0;
+            lastPlatformX = 0;
+            score = 0;
+            scoreElement.textContent = score;
+            gameOver = false;
+            gameStarted = false;
+            initPlatforms();
+        }
+
+        // 键盘按下
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                jump();
+                if (!gameStarted) gameStarted = true;
+            }
+            if (e.code === 'KeyR') {
+                resetGame();
+            }
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+                keys.right = true;
+                if (!gameStarted) gameStarted = true;
+            }
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+                keys.left = true;
+                if (!gameStarted) gameStarted = true;
+            }
+        });
+
+        // 键盘释放
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+                keys.right = false;
+            }
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+                keys.left = false;
+            }
+        });
+
+        // 鼠标/触摸控制
+        canvas.addEventListener('click', () => {
+            jump();
+            if (!gameStarted) gameStarted = true;
+        });
+        
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            jump();
+            if (!gameStarted) gameStarted = true;
+        });
+
+        // 初始化游戏
+        initPlatforms();
+        gameLoop();
+    </script>
+</body>
+</html>

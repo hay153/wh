@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>毛团日记</title>
+    <link rel="stylesheet" href="download/font_ldvv84u6qwf/iconfont.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(180deg, #fdf2f8 0%, #fce7f3 50%, #f5f3ff 100%);
+            min-height: 100vh;
+            overflow: visible;
+        }
+
+        #game-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: calc(100vh - 60px);
+            padding-bottom: 60px;
+            display: flex;
+            flex-direction: column;
+            z-index: 9999;
+            box-sizing: border-box;
+            overflow: visible;
+        }
+
+        .game-header {
+            padding: 12px 20px;
+            background: linear-gradient(90deg, #ec4899 0%, #d946ef 50%, #a855f7 100%);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 20px rgba(236, 72, 153, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .paw-decoration {
+            position: absolute;
+            font-size: 20px;
+            opacity: 0.35;
+            animation: pawFloat 3s ease-in-out infinite;
+        }
+
+        .paw-decoration.paw1 { left: 15%; top: 6px; animation-delay: 0s; }
+        .paw-decoration.paw2 { left: 28%; top: 22px; animation-delay: 0.5s; transform: rotate(-15deg); font-size: 14px; }
+        .paw-decoration.paw3 { right: 18%; top: 8px; animation-delay: 1s; transform: rotate(20deg); font-size: 16px; }
+        .paw-decoration.paw4 { right: 30%; top: 24px; animation-delay: 1.5s; transform: rotate(-10deg); font-size: 12px; }
+        .paw-decoration.paw5 { left: 42%; top: 4px; animation-delay: 0.8s; font-size: 13px; transform: rotate(10deg); }
+
+        @keyframes pawFloat {
+            0%, 100% { transform: translateY(0) rotate(var(--rotation, 0deg)); }
+            50% { transform: translateY(-3px) rotate(var(--rotation, 0deg)); }
+        }
+
+        .game-header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 2;
+            position: relative;
+        }
+
+        .close-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            z-index: 2;
+            position: relative;
+        }
+
+        .close-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            gap: 15px;
+            overflow: hidden;
+        }
+
+        .pet-area {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            background-image: url('猫咪背景图.jfif');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 24px;
+            overflow: hidden;
+        }
+
+        .pet-container {
+            width: 320px;
+            height: 320px;
+            position: relative;
+            background: transparent;
+            border-radius: 24px;
+            margin-bottom: 15px;
+        }
+
+        .cat {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform-origin: center bottom;
+            filter: drop-shadow(0 6px 12px rgba(0,0,0,0.15)) drop-shadow(0 3px 6px rgba(0,0,0,0.1)) brightness(1.08) contrast(1.05);
+        }
+        
+        .pet-area::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 20%;
+            background: linear-gradient(to top, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 100%);
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .cat-ground-shadow {
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70%;
+            height: 15px;
+            background: radial-gradient(ellipse at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+            filter: blur(6px);
+            z-index: -1;
+        }
+
+        .cat-bubble {
+            position: absolute;
+            top: -15px;
+            right: -20px;
+            left: auto;
+            transform: translateX(0) translateY(10px) scale(0.8);
+            background: linear-gradient(135deg, #fef3c7 0%, #fff 50%, #fce7f3 100%);
+            padding: 14px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #5b4a3f;
+            font-weight: 500;
+            box-shadow: 0 6px 20px rgba(236, 72, 153, 0.25), 0 2px 8px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.8);
+            opacity: 0;
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 30;
+            max-width: 300px;
+            white-space: normal;
+            line-height: 1.6;
+            text-align: center;
+            border: 2px solid rgba(255, 182, 193, 0.5);
+        }
+
+        .cat-bubble::before {
+            content: '';
+            position: absolute;
+            bottom: -12px;
+            left: 25px;
+            transform: rotate(180deg);
+            width: 0;
+            height: 0;
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-top: 14px solid rgba(255, 182, 193, 0.5);
+            filter: drop-shadow(0 3px 3px rgba(0,0,0,0.1));
+        }
+
+        .cat-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -9px;
+            left: 26px;
+            transform: rotate(180deg);
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 12px solid #fff;
+        }
+
+        .cat-bubble.show {
+            opacity: 1;
+            transform: translateX(0) translateY(0) scale(1);
+        }
+
+        /* 动作动画 */
+        .cat.idle { }
+        .cat.sleeping { }
+        .cat.eating { }
+        .cat.washing { }
+        .cat.petting { }
+        .cat.rolling { }
+        .cat.jumping { }
+        .cat.begging { }
+        .cat.stretching { }
+
+        @keyframes idle {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-8px) rotate(1deg); }
+            50% { transform: translateY(-3px) rotate(-0.5deg); }
+            75% { transform: translateY(-6px) rotate(0.5deg); }
+        }
+
+        @keyframes sleeping {
+            0%, 100% { transform: translateY(10px) scale(0.95); opacity: 0.9; }
+            50% { transform: translateY(15px) scale(0.93); opacity: 0.85; }
+        }
+
+        @keyframes eating {
+            0%, 100% { transform: rotate(-3deg) scale(1); }
+            25% { transform: rotate(3deg) scale(1.02) translateY(-5px); }
+            50% { transform: rotate(-3deg) scale(0.98) translateY(3px); }
+            75% { transform: rotate(3deg) scale(1.02) translateY(-3px); }
+        }
+
+        @keyframes washing {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.03) rotate(-10deg); }
+            75% { transform: scale(1.03) rotate(10deg); }
+        }
+
+        @keyframes petting {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+
+        @keyframes rolling {
+            0% { transform: rotate(0deg) translateY(0); }
+            25% { transform: rotate(90deg) translateY(-15px); }
+            50% { transform: rotate(180deg) translateY(-10px); }
+            75% { transform: rotate(270deg) translateY(-15px); }
+            100% { transform: rotate(360deg) translateY(0); }
+        }
+
+        @keyframes jumping {
+            0%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-70px); }
+            60% { transform: translateY(-80px); }
+        }
+
+        @keyframes begging {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes stretching {
+            0% { transform: scaleY(1); }
+            50% { transform: scaleY(1.2) scaleX(0.85); }
+            100% { transform: scaleY(1); }
+        }
+
+        .held-item {
+            position: absolute;
+            font-size: 40px;
+            z-index: 20;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .held-item.active {
+            opacity: 1;
+        }
+        
+        .held-item.food.active {
+            animation: eatingFood 0.5s ease-in-out infinite;
+        }
+
+        .held-item.food {
+            top: 68%;
+            left: 52%;
+            transform: rotate(-15deg) scale(0.7);
+        }
+        
+        .floating-food {
+            position: fixed;
+            font-size: 45px;
+            z-index: 99999;
+            pointer-events: none;
+            transition: none;
+            transform: translate(-50%, -50%);
+        }
+
+        .held-item.water {
+            top: 30%;
+            right: 15%;
+        }
+
+        @keyframes itemFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        
+        @keyframes eatingFood {
+            0%, 100% { 
+                transform: rotate(-20deg) translateY(0) scale(0.6); 
+                opacity: 1;
+            }
+            50% { 
+                transform: rotate(-10deg) translateY(-35px) translateX(15px) scale(0.3); 
+                opacity: 0.8;
+            }
+        }
+
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .particle.heart { font-size: 22px; animation: heartRise 1.2s ease-out forwards; }
+        .particle.food { font-size: 20px; animation: foodFloat 1.5s ease-out forwards; }
+        .particle.water {
+            width: 10px;
+            height: 10px;
+            background: radial-gradient(circle, #60a5fa 0%, #3b82f6 100%);
+            border-radius: 50%;
+            animation: waterDrop 1s ease-in forwards;
+        }
+
+        @keyframes heartRise {
+            0% { opacity: 1; transform: translateY(0) scale(0.5); }
+            50% { opacity: 1; transform: translateY(-60px) scale(1.3); }
+            100% { opacity: 0; transform: translateY(-120px) scale(0.5); }
+        }
+
+        @keyframes foodFloat {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-100px) scale(0.3); }
+        }
+
+        @keyframes waterDrop {
+            0% { opacity: 1; transform: translateY(-20px) scale(0); }
+            50% { opacity: 1; transform: translateY(30px) scale(1); }
+            100% { opacity: 0; transform: translateY(60px) scale(0.5); }
+        }
+
+        .exp-bubble {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fbbf24 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: #92400e;
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4), inset 0 2px 4px rgba(255,255,255,0.5);
+            cursor: pointer;
+            z-index: 50;
+            animation: expBubbleFloat 4s ease-in-out infinite;
+            transition: transform 0.2s;
+            border: 2px solid rgba(255,255,255,0.6);
+        }
+
+        .exp-bubble:hover {
+            transform: scale(1.15);
+            box-shadow: 0 6px 20px rgba(251, 191, 36, 0.5), inset 0 2px 4px rgba(255,255,255,0.5);
+        }
+
+        .exp-bubble:active {
+            transform: scale(0.95);
+        }
+
+        .exp-bubble.collected {
+            animation: expBubbleCollect 0.4s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes expBubbleFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        @keyframes expBubbleCollect {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.3); }
+            100% { opacity: 0; transform: scale(0.5) translateY(-50px); }
+        }
+
+        .pet-name {
+            text-align: center;
+            font-size: 18px;
+            color: #ec4899;
+            margin-top: 10px;
+            font-weight: 600;
+            letter-spacing: 2px;
+        }
+
+        .bottom-area {
+            display: flex;
+            gap: 10px;
+            min-height: 110px;
+            flex-shrink: 0;
+            padding-bottom: 8px;
+        }
+
+        .status-panel {
+            flex: 2;
+            background: white;
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .status-row {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .status-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #666;
+        }
+
+        .status-bar-fill {
+            height: 12px;
+            background: #f0f0f0;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .status-fill {
+            height: 100%;
+            border-radius: 9px;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+
+        .status-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255,255,255,0.5) 0%, transparent 100%);
+            border-radius: 9px 9px 0 0;
+        }
+
+        .status-fill.hunger {
+            background: linear-gradient(90deg, #f97316 0%, #fbbf24 100%);
+            box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
+        }
+
+        .status-fill.happiness {
+            background: linear-gradient(90deg, #ec4899 0%, #f472b6 100%);
+            box-shadow: 0 2px 8px rgba(236, 72, 153, 0.3);
+        }
+
+        .status-fill.cleanliness {
+            background: linear-gradient(90deg, #06b6d4 0%, #22d3ee 100%);
+            box-shadow: 0 2px 8px rgba(6, 182, 212, 0.3);
+        }
+
+        .level-panel {
+            flex: 1;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 12px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.2);
+        }
+
+        .level-circle {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+            box-shadow: 0 3px 8px rgba(245, 158, 11, 0.4);
+        }
+
+        .exp-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .exp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%);
+            border-radius: 2px;
+        }
+
+        .action-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 90px;
+        }
+
+        .action-btn {
+            min-height: 36px;
+            padding: 6px 8px;
+            background: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+
+        .action-btn.feed:hover { 
+            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+            box-shadow: 0 6px 15px rgba(249, 115, 22, 0.2);
+        }
+        .action-btn.pet:hover { 
+            background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+            box-shadow: 0 6px 15px rgba(236, 72, 153, 0.2);
+        }
+        .action-btn.wash:hover { 
+            background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+            box-shadow: 0 6px 15px rgba(6, 182, 212, 0.2);
+        }
+
+        .action-btn.chat:hover { 
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            box-shadow: 0 6px 15px rgba(245, 158, 11, 0.2);
+        }
+
+        .action-icon {
+            font-size: 22px;
+        }
+
+        .action-text {
+            font-size: 10px;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .dialogue-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            z-index: 999999;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            min-width: 280px;
+            max-width: 360px;
+        }
+
+        .dialogue-panel.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+            pointer-events: auto;
+        }
+
+        .dialogue-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ec4899;
+            text-align: center;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .dialogue-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .dialogue-option {
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #4a5568;
+            text-align: left;
+            transition: all 0.2s;
+        }
+
+        .dialogue-option:hover {
+            background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+            border-color: #ec4899;
+            transform: translateX(5px);
+        }
+
+        .dialogue-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.05);
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dialogue-close:hover {
+            background: rgba(0,0,0,0.1);
+        }
+
+        .dialogue-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.3);
+            z-index: 999998;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .dialogue-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .hide-hint {
+            position: fixed;
+            bottom: 65px;
+            left: 15px;
+            font-size: 11px;
+            color: #999;
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 12px;
+            backdrop-filter: blur(8px);
+        }
+
+        .action-btn.dress:hover { 
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            box-shadow: 0 6px 15px rgba(245, 158, 11, 0.2);
+        }
+
+        .dress-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            z-index: 999999;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            min-width: 320px;
+            max-width: 400px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dress-panel.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+            pointer-events: auto;
+        }
+
+        .dress-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #fce7f3;
+            padding-bottom: 8px;
+        }
+
+        .dress-tab {
+            flex: 1;
+            padding: 10px 12px;
+            background: #fdf2f8;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.2s;
+        }
+
+        .dress-tab:hover {
+            background: #fce7f3;
+        }
+
+        .dress-tab.active {
+            background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
+            color: white;
+            box-shadow: 0 3px 10px rgba(236, 72, 153, 0.3);
+        }
+
+        .dress-content {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 300px;
+        }
+
+        .dress-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .dress-item {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .dress-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .dress-item.selected {
+            border-color: #ec4899;
+            background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+            box-shadow: 0 4px 12px rgba(236, 72, 153, 0.2);
+        }
+
+        .dress-item.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(0.7);
+        }
+
+        .dress-item.locked:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .dress-item-icon {
+            font-size: 32px;
+        }
+
+        .dress-item-name {
+            font-size: 11px;
+            color: #666;
+            text-align: center;
+        }
+
+        .dress-item-lock {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            font-size: 14px;
+            color: #999;
+        }
+
+        .dress-item .unlock-btn {
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .dress-item .unlock-btn:hover {
+            transform: translateX(-50%) scale(1.05);
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+        }
+
+        .dress-notice {
+            margin-top: 12px;
+            padding: 10px;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 10px;
+            font-size: 12px;
+            color: #92400e;
+            text-align: center;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div class="game-header">
+            <span class="paw-decoration paw1">🐾</span>
+            <span class="paw-decoration paw2">🐾</span>
+            <span class="paw-decoration paw3">🐾</span>
+            <span class="paw-decoration paw4">🐾</span>
+            <span class="paw-decoration paw5">🐾</span>
+            <h1><span class="iconfont icon-maomi"></span> 毛团日记</h1>
+            <div class="close-btn" id="close-btn">×</div>
+        </div>
+
+        <div class="main-content">
+            <div class="pet-area" id="pet-area">
+                <div class="pet-container">
+                    <div class="cat-ground-shadow"></div>
+                    <div class="cat idle" id="cat">
+                        <img src="https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/cat.png.png" alt="金渐层猫咪" width="100%" height="100%" style="border-radius: 0; object-fit: contain;">
+                    </div>
+                    <div class="cat eating" id="cat-eating" style="display: none;">
+                        <img src="https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/cat%E5%BC%A0%E5%98%B4.png" alt="金渐层猫咪张嘴" width="100%" height="100%" style="border-radius: 0; object-fit: contain;">
+                    </div>
+                    <div class="cat petting" id="cat-petting" style="display: none;">
+                        <img src="https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E6%8A%9A%E6%91%B8.png" alt="金渐层猫咪抚摸" width="100%" height="100%" style="border-radius: 0; object-fit: contain;">
+                    </div>
+                    <div class="cat washing" id="cat-washing" style="display: none;">
+                        <img src="https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E6%B4%97%E6%BE%A1.png" alt="金渐层猫咪洗澡" width="100%" height="100%" style="border-radius: 0; object-fit: contain;">
+                    </div>
+                    <div class="cat talking" id="cat-talking" style="display: none;">
+                        <img src="https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E8%AF%B4%E8%AF%9D%E5%9B%BE.png" alt="金渐层猫咪说话" width="100%" height="100%" style="border-radius: 0; object-fit: contain;">
+                    </div>
+                    
+                    <div class="held-item food" id="held-food">🍖</div>
+                    <div class="held-item water" id="held-water">💧</div>
+                    <div class="cat-bubble" id="cat-bubble">主人，我需要食物</div>
+                </div>
+            </div>
+
+            <div class="bottom-area">
+                <div class="status-panel">
+                    <div class="status-row">
+                        <div class="status-label">
+                            <span>🍖 饱腹度</span>
+                            <span id="hunger-value">100</span>
+                        </div>
+                        <div class="status-bar-fill">
+                            <div class="status-fill hunger" id="hunger-bar"></div>
+                        </div>
+                    </div>
+                    <div class="status-row">
+                        <div class="status-label">
+                            <span>💖 心情值</span>
+                            <span id="happiness-value">100</span>
+                        </div>
+                        <div class="status-bar-fill">
+                            <div class="status-fill happiness" id="happiness-bar"></div>
+                        </div>
+                    </div>
+                    <div class="status-row">
+                        <div class="status-label">
+                            <span>💧 清洁度</span>
+                            <span id="cleanliness-value">100</span>
+                        </div>
+                        <div class="status-bar-fill">
+                            <div class="status-fill cleanliness" id="cleanliness-bar"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="level-panel">
+                    <div class="level-circle">Lv.<span id="level-value">1</span></div>
+                    <div style="font-size:11px;color:#92400e;font-weight:500">等级</div>
+                    <div class="exp-bar">
+                        <div class="exp-fill" id="exp-bar"></div>
+                    </div>
+                    <div style="font-size:10px;color:#b45309">
+                        <span id="exp-value">0/100</span>
+                    </div>
+                </div>
+
+                <div class="action-panel">
+                    <button class="action-btn feed" id="feed-btn">
+                        <span class="action-icon iconfont icon-rou"></span>
+                        <span class="action-text">喂食</span>
+                    </button>
+                    <button class="action-btn pet" id="pet-btn">
+                        <span class="action-icon iconfont icon-shou"></span>
+                        <span class="action-text">抚摸</span>
+                    </button>
+                    <button class="action-btn wash" id="wash-btn">
+                        <span class="action-icon iconfont icon-chongwuxizao"></span>
+                        <span class="action-text">洗澡</span>
+                    </button>
+                    <button class="action-btn chat" id="chat-btn">
+                        <span class="action-icon">💬</span>
+                        <span class="action-text">对话</span>
+                    </button>
+                    <button class="action-btn dress" id="dress-btn">
+                        <span class="action-icon">🎀</span>
+                        <span class="action-text">装扮</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="hide-hint">按 ESC 隐藏游戏</div>
+
+    <div class="dialogue-overlay" id="dialogue-overlay"></div>
+    <div class="dialogue-panel" id="dialogue-panel">
+        <button class="dialogue-close" id="dialogue-close">×</button>
+        <div class="dialogue-title">🐾 想跟我说什么呢？</div>
+        <div class="dialogue-options" id="dialogue-options"></div>
+    </div>
+
+    <div class="dialogue-overlay" id="dress-overlay"></div>
+    <div class="dress-panel" id="dress-panel">
+        <button class="dialogue-close" id="dress-close">×</button>
+        <div class="dialogue-title">🎀 猫咪装扮屋</div>
+        <div class="dress-tabs">
+            <button class="dress-tab active" data-category="clothes">👕 衣服</button>
+        </div>
+        <div class="dress-content">
+            <div class="dress-grid" id="dress-grid"></div>
+        </div>
+        <div class="dress-notice" id="dress-notice">升级到Lv.2解锁装扮功能！</div>
+    </div>
+
+    <script>
+        const gameState = {
+            hunger: 100,
+            happiness: 100,
+            cleanliness: 100,
+            level: 1,
+            exp: 0,
+            expToNext: 100,
+            unlockedItems: [],
+            equippedItems: {
+                clothes: null
+            }
+        };
+
+        const dressItems = {
+            clothes: [
+                { id: 'clothes1', name: '小裙子', icon: '👗', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E5%B0%8F%E8%A3%99%E5%AD%90.png', unlockLevel: 2 },
+                { id: 'clothes2', name: '卫衣', icon: '👕', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E5%8D%AB%E8%A1%A3.png', unlockLevel: 2 },
+                { id: 'clothes3', name: '毛衣', icon: '🧶', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E6%AF%9B%E8%A1%A3.png', unlockLevel: 2 },
+                { id: 'clothes4', name: '背带裤', icon: '👖', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E8%83%8C%E5%B8%A6%E8%A3%A4.png', unlockLevel: 3 },
+                { id: 'clothes5', name: '连衣裙', icon: '🎀', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E8%BF%9E%E8%A1%A3%E8%A3%99.png', unlockLevel: 3 },
+                { id: 'clothes6', name: '外套', icon: '🧥', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E5%A4%96%E5%A5%97.png', unlockLevel: 3 },
+                { id: 'clothes7', name: '和服', icon: '👘', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E5%92%8C%E6%9C%8D.png', unlockLevel: 4 },
+                { id: 'clothes8', name: '圣诞装', icon: '🎄', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E5%9C%A3%E8%AF%9E.png', unlockLevel: 4 },
+                { id: 'clothes9', name: '西装', icon: '👔', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E8%A5%BF%E8%A3%85.png', unlockLevel: 4 },
+                { id: 'clothes10', name: '公主裙', icon: '💃', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E5%85%AC%E4%B8%BB%E8%A3%99.png', unlockLevel: 5 },
+                { id: 'clothes11', name: '泳衣', icon: '🩱', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E6%B3%B3%E8%A1%A3.png', unlockLevel: 5 },
+                { id: 'clothes12', name: '风衣', icon: '🎩', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E9%A3%8E%E8%A1%A3.png', unlockLevel: 5 },
+                { id: 'clothes13', name: '礼服', icon: '💎', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E7%A4%BC%E6%9C%8D.png', unlockLevel: 6 },
+                { id: 'clothes14', name: '羽绒服', icon: '🧣', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E7%BE%BD%E7%BB%92%E6%9C%8D.png', unlockLevel: 6 },
+                { id: 'clothes15', name: '牛仔裤', icon: '🩳', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E7%89%9B%E4%BB%94%E8%A3%A4.png', unlockLevel: 6 },
+                { id: 'clothes16', name: '运动衫', icon: '🎽', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E8%BF%90%E5%8A%A8%E8%A1%AB.png', unlockLevel: 7 },
+                { id: 'clothes17', name: '牛仔外套', icon: '🛡️', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E7%89%9B%E4%BB%94%E5%A4%96%E5%A5%97.png', unlockLevel: 7 },
+                { id: 'clothes18', name: '旗袍', icon: '🧧', catImage: 'https://1223456-1447774370.cos.ap-guangzhou.myqcloud.com/qimo/%E7%8C%AB%E5%92%AA%E6%97%97%E8%A2%8D.png', unlockLevel: 7 }
+            ]
+        };
+
+        const CONFIG = {
+            DECAY_INTERVAL: 15000,
+            DECAY_AMOUNT: 1,
+            FEED_AMOUNT: 20,
+            PET_AMOUNT: 18,
+            WASH_AMOUNT: 25,
+            ACTION_EXP: 5
+        };
+
+        const elements = {
+            cat: document.getElementById('cat'),
+            catEating: document.getElementById('cat-eating'),
+            catPetting: document.getElementById('cat-petting'),
+            catWashing: document.getElementById('cat-washing'),
+            catTalking: document.getElementById('cat-talking'),
+            catBubble: document.getElementById('cat-bubble'),
+            hungerBar: document.getElementById('hunger-bar'),
+            happinessBar: document.getElementById('happiness-bar'),
+            cleanlinessBar: document.getElementById('cleanliness-bar'),
+            hungerValue: document.getElementById('hunger-value'),
+            happinessValue: document.getElementById('happiness-value'),
+            cleanlinessValue: document.getElementById('cleanliness-value'),
+            levelValue: document.getElementById('level-value'),
+            expBar: document.getElementById('exp-bar'),
+            expValue: document.getElementById('exp-value'),
+            feedBtn: document.getElementById('feed-btn'),
+            petBtn: document.getElementById('pet-btn'),
+            washBtn: document.getElementById('wash-btn'),
+            closeBtn: document.getElementById('close-btn'),
+            petArea: document.getElementById('pet-area'),
+            heldFood: document.getElementById('held-food'),
+            heldWater: document.getElementById('held-water'),
+            gameContainer: document.getElementById('game-container'),
+            chatBtn: document.getElementById('chat-btn'),
+            dialoguePanel: document.getElementById('dialogue-panel'),
+            dialogueOverlay: document.getElementById('dialogue-overlay'),
+            dialogueClose: document.getElementById('dialogue-close'),
+            dialogueOptions: document.getElementById('dialogue-options'),
+            dressBtn: document.getElementById('dress-btn'),
+            dressPanel: document.getElementById('dress-panel'),
+            dressOverlay: document.getElementById('dress-overlay'),
+            dressClose: document.getElementById('dress-close'),
+            dressGrid: document.getElementById('dress-grid'),
+            dressTabs: document.querySelectorAll('.dress-tab'),
+            dressNotice: document.getElementById('dress-notice'),
+            petContainer: document.querySelector('.pet-container')
+        };
+        
+        let floatingFood = null;
+        let isFeeding = false;
+        let currentZeroStatus = null;
+        let expBubbleCount = 0;
+        const MAX_EXP_BUBBLES = 8;
+
+        function createExpBubble() {
+            if (expBubbleCount >= MAX_EXP_BUBBLES) return;
+
+            const bubble = document.createElement('div');
+            bubble.className = 'exp-bubble';
+            bubble.textContent = '经验+1';
+
+            const petArea = elements.petArea;
+            const areaRect = petArea.getBoundingClientRect();
+
+            const bubbleSize = 60;
+            const safeMargin = 20;
+
+            let x, y;
+            const edge = Math.floor(Math.random() * 4);
+
+            switch(edge) {
+                case 0:
+                    x = safeMargin + Math.random() * 100;
+                    y = safeMargin + Math.random() * (areaRect.height * 0.35);
+                    break;
+                case 1:
+                    x = areaRect.width - bubbleSize - safeMargin - Math.random() * 100;
+                    y = safeMargin + Math.random() * (areaRect.height * 0.35);
+                    break;
+                case 2:
+                    x = safeMargin + Math.random() * (areaRect.width * 0.25);
+                    y = safeMargin + Math.random() * (areaRect.height * 0.35);
+                    break;
+                case 3:
+                    x = areaRect.width * 0.75 + Math.random() * (areaRect.width * 0.25 - bubbleSize - safeMargin);
+                    y = safeMargin + Math.random() * (areaRect.height * 0.35);
+                    break;
+            }
+
+            bubble.style.left = `${x}px`;
+            bubble.style.top = `${y}px`;
+            bubble.style.animationDelay = `${Math.random() * 2}s`;
+
+            bubble.addEventListener('click', () => {
+                if (bubble.classList.contains('collected')) return;
+
+                bubble.classList.add('collected');
+                expBubbleCount--;
+
+                gameState.exp += 10;
+                while (gameState.exp >= gameState.expToNext) {
+                    gameState.exp -= gameState.expToNext;
+                    gameState.level++;
+                    gameState.expToNext = Math.floor(gameState.expToNext * 1.5);
+                }
+                updateUI();
+                saveGame();
+
+                setTimeout(() => {
+                    bubble.remove();
+                }, 400);
+            });
+
+            petArea.appendChild(bubble);
+            expBubbleCount++;
+        }
+
+        function spawnExpBubbles() {
+            const count = 2 + Math.floor(Math.random() * 2);
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => createExpBubble(), i * 300);
+            }
+
+            const nextSpawn = 15000 + Math.random() * 10000;
+            setTimeout(spawnExpBubbles, nextSpawn);
+        }
+
+        spawnExpBubbles();
+
+        const dialogues = [
+            { question: '猫咪，你今天开心吗？', answer: '主人在我就开心呀~ 💕' },
+            { question: '你想吃什么好吃的？', answer: '我想吃小鱼干和肉罐头！喵~ 🐟' },
+            { question: '陪我玩一会好吗？', answer: '好呀好呀！我们来玩逗猫棒吧！🎀' },
+            { question: '你喜欢洗澡吗？', answer: '呃...这个问题我拒绝回答！😾' },
+            { question: '你最喜欢谁？', answer: '当然是最喜欢主人啦！❤' },
+            { question: '给我讲个笑话听听', answer: '为什么猫咪不喜欢网购？因为怕收到喵(邮)件！哈哈哈~ 😂' },
+            { question: '我累了怎么办', answer: '主人辛苦啦！来，靠在我身上休息一下~ 😴' },
+            { question: '你在想什么？', answer: '我在想...下一顿吃什么呢... 🍖' }
+        ];
+
+        function loadGame() {
+            const saved = localStorage.getItem('catPetGame');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    Object.assign(gameState, data);
+                } catch (e) {
+                    console.error('加载失败:', e);
+                }
+            }
+            updateUI();
+            checkZeroStatus();
+            updateDressPreview();
+        }
+
+        function saveGame() {
+            localStorage.setItem('catPetGame', JSON.stringify(gameState));
+        }
+
+        setInterval(saveGame, 30000);
+
+        function updateStatus(key, amount) {
+            gameState[key] = Math.max(0, Math.min(100, gameState[key] + amount));
+            updateUI();
+            checkZeroStatus();
+        }
+
+        function addExp(amount) {
+            gameState.exp += amount;
+            while (gameState.exp >= gameState.expToNext) {
+                gameState.exp -= gameState.expToNext;
+                gameState.level++;
+                gameState.expToNext = Math.floor(gameState.expToNext * 1.5);
+                triggerAction('jumping');
+                
+                if (gameState.level >= 2) {
+                    elements.catBubble.textContent = `恭喜升级到Lv.${gameState.level}！可以解锁新的装扮啦！🎀`;
+                    setCatDisplay('talking');
+                    setTimeout(() => {
+                        checkZeroStatus();
+                    }, 4000);
+                }
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            elements.hungerBar.style.width = `${gameState.hunger}%`;
+            elements.happinessBar.style.width = `${gameState.happiness}%`;
+            elements.cleanlinessBar.style.width = `${gameState.cleanliness}%`;
+            elements.hungerValue.textContent = Math.floor(gameState.hunger);
+            elements.happinessValue.textContent = Math.floor(gameState.happiness);
+            elements.cleanlinessValue.textContent = Math.floor(gameState.cleanliness);
+            elements.levelValue.textContent = gameState.level;
+            const expPercent = (gameState.exp / gameState.expToNext) * 100;
+            elements.expBar.style.width = `${expPercent}%`;
+            elements.expValue.textContent = `${gameState.exp}/${gameState.expToNext}`;
+        }
+
+        function clearActions() {
+            const actions = ['idle', 'sleeping', 'eating', 'washing', 'petting', 'rolling', 'jumping', 'begging', 'stretching'];
+            actions.forEach(action => elements.cat.classList.remove(action));
+            elements.heldFood.classList.remove('active');
+            elements.heldWater.classList.remove('active');
+        }
+
+        let actionInProgress = false;
+
+        function setCatDisplay(state) {
+            elements.cat.style.display = state === 'idle' ? 'block' : 'none';
+            elements.catEating.style.display = state === 'eating' ? 'block' : 'none';
+            elements.catPetting.style.display = state === 'petting' ? 'block' : 'none';
+            elements.catWashing.style.display = state === 'washing' ? 'block' : 'none';
+            elements.catTalking.style.display = state === 'talking' ? 'block' : 'none';
+            if (state === 'talking') {
+                elements.catBubble.classList.add('show');
+            } else {
+                elements.catBubble.classList.remove('show');
+            }
+            updateDressPreview();
+        }
+
+        function checkZeroStatus() {
+            if (actionInProgress) return;
+            if (gameState.hunger === 0) {
+                elements.catBubble.textContent = '主人，我需要食物';
+                setCatDisplay('talking');
+                currentZeroStatus = 'hunger';
+            } else if (gameState.happiness === 0) {
+                elements.catBubble.textContent = '主人，我需要关爱';
+                setCatDisplay('talking');
+                currentZeroStatus = 'happiness';
+            } else if (gameState.cleanliness === 0) {
+                elements.catBubble.textContent = '主人，我需要洗澡';
+                setCatDisplay('talking');
+                currentZeroStatus = 'cleanliness';
+            } else {
+                setCatDisplay('idle');
+                currentZeroStatus = null;
+            }
+        }
+
+        function triggerAction(action) {
+            clearActions();
+            actionInProgress = true;
+            setCatDisplay('idle');
+            elements.cat.classList.add(action);
+            
+            const duration = action === 'jumping' ? 1000 : action === 'stretching' ? 1200 : 2500;
+            setTimeout(() => {
+                actionInProgress = false;
+                checkZeroStatus();
+            }, duration);
+        }
+
+        function createParticles(type, count) {
+            const items = {
+                food: ['🍖', '🍗', '🥩', '🍕'],
+                heart: ['💕', '💖', '💗', '💓']
+            };
+            
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement(type === 'water' ? 'div' : 'span');
+                    particle.className = `particle ${type}`;
+                    
+                    if (type === 'food') {
+                        particle.textContent = items.food[Math.floor(Math.random() * items.food.length)];
+                    } else if (type === 'heart') {
+                        particle.textContent = items.heart[Math.floor(Math.random() * items.heart.length)];
+                    }
+                    
+                    particle.style.left = `${35 + Math.random() * 50}%`;
+                    particle.style.top = `${40 + Math.random() * 30}%`;
+                    
+                    elements.petArea.appendChild(particle);
+                    
+                    setTimeout(() => particle.remove(), type === 'water' ? 1000 : 1200);
+                }, i * 150);
+            }
+        }
+
+        elements.feedBtn.addEventListener('mousedown', (e) => {
+            if (isFeeding) return;
+            isFeeding = true;
+            
+            floatingFood = document.createElement('span');
+            floatingFood.className = 'floating-food';
+            floatingFood.textContent = '🍖';
+            floatingFood.style.left = `${e.clientX}px`;
+            floatingFood.style.top = `${e.clientY}px`;
+            floatingFood.style.opacity = '1';
+            document.body.appendChild(floatingFood);
+            
+            function handleMouseMove(e) {
+                floatingFood.style.left = `${e.clientX}px`;
+                floatingFood.style.top = `${e.clientY}px`;
+            }
+            
+            function handleMouseUp(e) {
+                const catRect = document.querySelector('.pet-container').getBoundingClientRect();
+                const centerX = e.clientX;
+                const centerY = e.clientY;
+                
+                if (centerX >= catRect.left && centerX <= catRect.right &&
+                    centerY >= catRect.top && centerY <= catRect.bottom) {
+                    actionInProgress = true;
+                    setCatDisplay('eating');
+                    
+                    updateStatus('hunger', CONFIG.FEED_AMOUNT);
+                    addExp(CONFIG.ACTION_EXP);
+                    createParticles('food', 4);
+                    
+                    setTimeout(() => {
+                        actionInProgress = false;
+                        checkZeroStatus();
+                    }, 2500);
+                }
+                
+                if (floatingFood) {
+                    floatingFood.remove();
+                    floatingFood = null;
+                }
+                isFeeding = false;
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            }
+            
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        });
+
+        elements.petBtn.addEventListener('mousedown', (e) => {
+            if (isFeeding) return;
+            isFeeding = true;
+            
+            floatingFood = document.createElement('span');
+            floatingFood.className = 'floating-food';
+            floatingFood.textContent = '✋';
+            floatingFood.style.left = `${e.clientX}px`;
+            floatingFood.style.top = `${e.clientY}px`;
+            floatingFood.style.opacity = '1';
+            document.body.appendChild(floatingFood);
+            
+            function handleMouseMove(e) {
+                floatingFood.style.left = `${e.clientX}px`;
+                floatingFood.style.top = `${e.clientY}px`;
+            }
+            
+            function handleMouseUp(e) {
+                const catRect = document.querySelector('.pet-container').getBoundingClientRect();
+                const centerX = e.clientX;
+                const centerY = e.clientY;
+                
+                if (centerX >= catRect.left && centerX <= catRect.right &&
+                    centerY >= catRect.top && centerY <= catRect.bottom) {
+                    actionInProgress = true;
+                    setCatDisplay('petting');
+                    
+                    updateStatus('happiness', CONFIG.PET_AMOUNT);
+                    addExp(CONFIG.ACTION_EXP);
+                    createParticles('heart', 5);
+                    
+                    setTimeout(() => {
+                        actionInProgress = false;
+                        checkZeroStatus();
+                    }, 2500);
+                }
+                
+                if (floatingFood) {
+                    floatingFood.remove();
+                    floatingFood = null;
+                }
+                isFeeding = false;
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            }
+            
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        });
+
+        elements.washBtn.addEventListener('mousedown', (e) => {
+            if (isFeeding) return;
+            isFeeding = true;
+            
+            floatingFood = document.createElement('span');
+            floatingFood.className = 'floating-food';
+            floatingFood.textContent = '🛁';
+            floatingFood.style.left = `${e.clientX}px`;
+            floatingFood.style.top = `${e.clientY}px`;
+            floatingFood.style.opacity = '1';
+            document.body.appendChild(floatingFood);
+            
+            function handleMouseMove(e) {
+                floatingFood.style.left = `${e.clientX}px`;
+                floatingFood.style.top = `${e.clientY}px`;
+            }
+            
+            function handleMouseUp(e) {
+                const catRect = document.querySelector('.pet-container').getBoundingClientRect();
+                const centerX = e.clientX;
+                const centerY = e.clientY;
+                
+                if (centerX >= catRect.left && centerX <= catRect.right &&
+                    centerY >= catRect.top && centerY <= catRect.bottom) {
+                    actionInProgress = true;
+                    setCatDisplay('washing');
+                    
+                    updateStatus('cleanliness', CONFIG.WASH_AMOUNT);
+                    addExp(CONFIG.ACTION_EXP);
+                    createParticles('water', 6);
+                    
+                    setTimeout(() => {
+                        actionInProgress = false;
+                        checkZeroStatus();
+                    }, 2500);
+                }
+                
+                if (floatingFood) {
+                    floatingFood.remove();
+                    floatingFood = null;
+                }
+                isFeeding = false;
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            }
+            
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        });
+
+        function renderDialogueOptions() {
+            elements.dialogueOptions.innerHTML = '';
+            dialogues.forEach((d, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'dialogue-option';
+                btn.textContent = d.question;
+                btn.addEventListener('click', () => handleDialogueSelect(idx));
+                elements.dialogueOptions.appendChild(btn);
+            });
+        }
+
+        function openDialogue() {
+            renderDialogueOptions();
+            elements.dialoguePanel.classList.add('show');
+            elements.dialogueOverlay.classList.add('show');
+        }
+
+        function closeDialogue() {
+            elements.dialoguePanel.classList.remove('show');
+            elements.dialogueOverlay.classList.remove('show');
+        }
+
+        function handleDialogueSelect(idx) {
+            const response = dialogues[idx].answer;
+            closeDialogue();
+            actionInProgress = true;
+            setCatDisplay('talking');
+            elements.catBubble.textContent = response;
+            elements.catBubble.classList.add('show');
+            updateStatus('happiness', 10);
+            addExp(3);
+            
+            setTimeout(() => {
+                actionInProgress = false;
+                checkZeroStatus();
+            }, 3500);
+        }
+
+        elements.chatBtn.addEventListener('click', openDialogue);
+        elements.dialogueClose.addEventListener('click', closeDialogue);
+        elements.dialogueOverlay.addEventListener('click', closeDialogue);
+
+        let currentDressCategory = 'clothes';
+
+        function renderDressItems() {
+            elements.dressGrid.innerHTML = '';
+            const items = dressItems[currentDressCategory];
+            
+            items.forEach(item => {
+                const isUnlocked = gameState.unlockedItems.includes(item.id);
+                const isEligible = gameState.level >= item.unlockLevel;
+                const isEquipped = gameState.equippedItems[currentDressCategory] === item.id;
+                
+                const itemEl = document.createElement('div');
+                itemEl.className = `dress-item ${isUnlocked ? '' : 'locked'} ${isEquipped ? 'selected' : ''}`;
+                itemEl.dataset.id = item.id;
+                itemEl.dataset.category = currentDressCategory;
+                
+                itemEl.innerHTML = `
+                    <span class="dress-item-icon">${item.icon}</span>
+                    <span class="dress-item-name">${item.name}</span>
+                    ${!isUnlocked ? '<span class="dress-item-lock">🔒</span>' : ''}
+                    ${!isUnlocked && isEligible ? '<button class="unlock-btn">解锁</button>' : ''}
+                `;
+                
+                if (isUnlocked) {
+                    itemEl.addEventListener('click', () => equipItem(item.id, currentDressCategory));
+                } else {
+                    const unlockBtn = itemEl.querySelector('.unlock-btn');
+                    if (unlockBtn) {
+                        unlockBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            unlockItem(item.id);
+                        });
+                    }
+                }
+                
+                elements.dressGrid.appendChild(itemEl);
+            });
+        }
+
+        function unlockItem(itemId) {
+            if (!gameState.unlockedItems.includes(itemId)) {
+                gameState.unlockedItems.push(itemId);
+                saveGame();
+                renderDressItems();
+                updateDressNotice();
+                createParticles('heart', 3);
+            }
+        }
+
+        function equipItem(itemId, category) {
+            if (gameState.equippedItems[category] === itemId) {
+                gameState.equippedItems[category] = null;
+            } else {
+                gameState.equippedItems[category] = itemId;
+                createParticles('heart', 5);
+            }
+            saveGame();
+            renderDressItems();
+            updateDressPreview();
+        }
+
+        function updateDressPreview() {
+            const itemId = gameState.equippedItems.clothes;
+            const catImg = elements.cat.querySelector('img');
+            if (itemId) {
+                const item = dressItems.clothes.find(i => i.id === itemId);
+                if (item && item.catImage) {
+                    catImg.src = item.catImage;
+                }
+            } else {
+                catImg.src = 'cat.png.png';
+            }
+        }
+
+        function updateDressNotice() {
+            if (gameState.level >= 2) {
+                elements.dressNotice.textContent = `当前等级 Lv.${gameState.level}，可解锁更多装扮！`;
+                elements.dressNotice.style.background = 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)';
+                elements.dressNotice.style.color = '#065f46';
+            } else {
+                elements.dressNotice.textContent = `升级到Lv.2解锁装扮功能！`;
+                elements.dressNotice.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
+                elements.dressNotice.style.color = '#92400e';
+            }
+        }
+
+        function openDressPanel() {
+            if (gameState.level < 2) {
+                elements.catBubble.textContent = '主人，我还太小啦，等我长大一点再打扮我吧！';
+                setCatDisplay('talking');
+                return;
+            }
+            renderDressItems();
+            updateDressNotice();
+            elements.dressPanel.classList.add('show');
+            elements.dressOverlay.classList.add('show');
+        }
+
+        function closeDressPanel() {
+            elements.dressPanel.classList.remove('show');
+            elements.dressOverlay.classList.remove('show');
+        }
+
+        elements.dressTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                elements.dressTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentDressCategory = tab.dataset.category;
+                renderDressItems();
+            });
+        });
+
+        elements.dressBtn.addEventListener('click', openDressPanel);
+        elements.dressClose.addEventListener('click', closeDressPanel);
+        elements.dressOverlay.addEventListener('click', closeDressPanel);
+
+        elements.closeBtn.addEventListener('click', () => {
+            elements.gameContainer.style.display = 'none';
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                elements.gameContainer.style.display = elements.gameContainer.style.display === 'none' ? 'flex' : 'none';
+            }
+        });
+
+        setInterval(() => {
+            updateStatus('hunger', -CONFIG.DECAY_AMOUNT);
+            updateStatus('happiness', -CONFIG.DECAY_AMOUNT * 0.7);
+            updateStatus('cleanliness', -CONFIG.DECAY_AMOUNT * 0.5);
+            saveGame();
+        }, CONFIG.DECAY_INTERVAL);
+
+        setInterval(() => {
+            if (!actionInProgress && gameState.hunger >= 25 && gameState.happiness >= 25) {
+                const actions = ['idle', 'idle', 'idle', 'begging', 'stretching'];
+                const randomAction = actions[Math.floor(Math.random() * actions.length)];
+                if (randomAction !== 'idle') {
+                    triggerAction(randomAction);
+                }
+            }
+        }, 40000);
+
+        loadGame();
+        elements.cat.classList.add('idle');
+    </script>
+</body>
+</html>

@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>终极魔改打砖块（碰撞&提前通关BUG修复）</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+background: #0a0a18;
+display: flex;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+height: 100vh;
+color: white;
+font-family: "Microsoft Yahei", Arial, sans-serif;
+gap: 12px;
+}
+#game {
+position: relative;
+width: 800px;
+height: 600px;
+background: radial-gradient(circle, #152040 0%, #0d1025 100%);
+border: 3px solid #00f2ff;
+overflow: hidden;
+box-shadow: 0 0 25px #00aaff60;
+}
+#paddle {
+position: absolute;
+width: 100px;
+height: 15px;
+background: linear-gradient(#00f2ff, #0077aa);
+bottom: 20px;
+border-radius: 8px;
+box-shadow: 0 0 10px #00f2ff;
+transition: width 0.2s ease;
+}
+.ball {
+position: absolute;
+width: 14px;
+height: 14px;
+background: radial-gradient(#fff, #b0f0ff);
+border-radius: 50%;
+box-shadow: 0 0 8px #ffffff;
+}
+.ball-pierce {
+background: radial-gradient(#ff0, #f80);
+box-shadow: 0 0 10px #ffdd00;
+}
+.brick {
+position: absolute;
+border-radius: 4px;
+transition: opacity 0.15s;
+}
+.brick-normal {
+background: linear-gradient(#59f997, #28a858);
+box-shadow: 0 0 6px #3fdd7770;
+}
+.brick-hard {
+background: linear-gradient(#ff9533, #b85800);
+box-shadow: 0 0 6px #ff882270;
+}
+.brick-gold {
+background: linear-gradient(#ffe135, #b89000);
+box-shadow: 0 0 8px #ffdd2290;
+}
+.brick-bomb {
+background: linear-gradient(#f44, #900);
+box-shadow: 0 0 8px #ff333390;
+}
+.prop {
+position: absolute;
+width: 22px;
+height: 22px;
+border-radius: 50%;
+text-align: center;
+line-height: 22px;
+font-size: 14px;
+font-weight: bold;
+user-select: none;
+}
+.prop-wide {background:#0cf;color:#000;}
+.prop-fast {background:#f33;color:#fff;}
+.prop-life {background:#3f3;color:#000;}
+.prop-slow {background:#93f;color:#fff;}
+.prop-multiball {background:#ff0;color:#000;}
+.prop-pierce {background:#f80;color:#fff;}
+.prop-shield {background:#0aa;color:#fff;}
+.prop-bombClear {background:#a0f;color:#fff;}
+.particle {
+position: absolute;
+border-radius: 50%;
+pointer-events: none;
+}
+.info-bar {
+width: 800px;
+display: flex;
+justify-content: space-between;
+font-size: 19px;
+padding: 0 10px;
+}
+.text {color: #eee;}
+#pauseTip {color: #ffdd44;display: none;}
+#gameOver, #win, #pausePanel {
+position: absolute;
+top: 50%;left: 50%;
+transform: translate(-50%, -50%);
+font-size: 40px;
+color: #ff3c57;
+display: none;
+text-align: center;
+background: #000000cc;
+padding: 40px 60px;
+border-radius: 12px;
+border: 2px solid #fff3;
+}
+#win {color: #59f997;}
+#pausePanel {color: #ffdd44;display: none;}
+button {
+padding: 10px 24px;
+margin-top: 20px;
+font-size: 18px;
+cursor: pointer;
+background: #00f2ff;
+border: none;color: #000;
+border-radius: 6px;transition: 0.2s;
+}
+button:hover {background: #00b8dd;}
+#hint {color: #aaa;font-size: 15px;}
+#shieldTip {
+position:absolute;bottom:5px;left:10px;color:#0cf;
+font-size:16px;display:none;
+}
+</style>
+</head>
+<body>
+<div class="info-bar">
+<div class="text">分数: <span id="score">0</span></div>
+<div class="text">最高分: <span id="highScore">0</span></div>
+<div class="text">生命: <span id="life">3</span></div>
+<div class="text">关卡: <span id="level">1</span></div>
+<div id="pauseTip">【已暂停 按空格继续】</div>
+</div>
+<div id="game">
+<div id="paddle"></div>
+<div id="shieldTip">护盾激活中</div>
+<div id="gameOver">游戏结束<br><button onclick="restart()">重新开始</button></div>
+<div id="win">恭喜通关！🎉<br><button onclick="nextLevel()">下一关</button></div>
+<div id="pausePanel">游戏暂停<br><button onclick="resumeGame()">继续游戏</button></div>
+</div>
+<div id="hint">鼠标移动挡板 | 点击发球 | 空格 暂停/继续</div>
+
+<script>
+const game = document.getElementById('game');
+const paddle = document.getElementById('paddle');
+const scoreText = document.getElementById('score');
+const highScoreText = document.getElementById('highScore');
+const lifeText = document.getElementById('life');
+const levelText = document.getElementById('level');
+const gameOver = document.getElementById('gameOver');
+const win = document.getElementById('win');
+const pausePanel = document.getElementById('pausePanel');
+const pauseTip = document.getElementById('pauseTip');
+const shieldTip = document.getElementById('shieldTip');
+
+let score = 0;
+let highScore = parseInt(localStorage.getItem('breakoutHighScore')) || 0;
+highScoreText.textContent = highScore;
+let life = 3;
+let level = 1;
+let isPaused = false;
+const MAX_SPEED = 9;
+let paddleBaseWidth = 100;
+let paddleWidth = paddleBaseWidth;
+let hasShield = false;
+
+// 多球数组管理
+let balls = [];
+let props = [];
+let particles = [];
+let bricks = [];
+
+// 初始化单个主球
+function initFirstBall(){
+    let ballEl = document.createElement('div');
+    ballEl.className = 'ball';
+    game.appendChild(ballEl);
+    balls.push({
+        el: ballEl,
+        x: 0, y: 0,
+        vx: 0, vy: 0,
+        pierce: false
+    });
+    resetAllBalls();
+}
+
+// 只把【静止球】吸附在挡板上方待命，已发射球不动
+function resetAllBalls(){
+    balls.forEach(b=>{
+        // 只有速度为0的待命球才跟随挡板
+        if(b.vx === 0 && b.vy === 0){
+            b.x = paddle.offsetLeft + paddle.offsetWidth/2 -7;
+            b.y = paddle.offsetTop - 19;
+            b.el.style.left = b.x+'px';
+            b.el.style.top = b.y+'px';
+        }
+    })
+}
+
+// 发射所有待命球
+function launchAllBalls(){
+    balls.forEach(b=>{
+        if(b.vx===0&&b.vy===0){
+            b.vx = (Math.random()>0.5?4:-4);
+            b.vy = -4;
+        }
+    })
+}
+
+// 鼠标移动挡板
+game.addEventListener('mousemove', (e) => {
+if(isPaused) return;
+let rect = game.getBoundingClientRect();
+let x = e.clientX - rect.left - paddle.offsetWidth / 2;
+if (x < 0) x = 0;
+if (x > game.offsetWidth - paddle.offsetWidth) x = game.offsetWidth - paddle.offsetWidth;
+paddle.style.left = x + 'px';
+resetAllBalls();
+});
+
+game.addEventListener('click', () => {
+if(isPaused) return;
+launchAllBalls();
+});
+
+document.addEventListener('keydown', e => {
+if(e.code === 'Space') {
+if(isPaused) resumeGame();
+else pauseGame();
+}
+})
+
+function pauseGame() {
+isPaused = true;
+pausePanel.style.display = 'block';
+pauseTip.style.display = 'inline-block';
+}
+function resumeGame() {
+isPaused = false;
+pausePanel.style.display = 'none';
+pauseTip.style.display = 'none';
+requestAnimationFrame(loop);
+}
+
+// 砖块生成：普通、硬砖、金砖、炸弹砖
+function createBricks() {
+bricks.forEach(b => b.el.remove());
+bricks = [];
+let rows = 4 + level;
+let cols = 10;
+let w = 70;
+let h = 20;
+let gap = 10;
+for (let y = 0; y < rows; y++) {
+for (let x = 0; x < cols; x++) {
+let el = document.createElement('div');
+el.className = 'brick';
+let rand = Math.random();
+let hp = 1;
+let point = 10;
+let isBomb = false;
+if(rand < 0.08){
+    el.classList.add('brick-bomb');
+    hp=1;point=20;isBomb=true;
+}else if(rand < 0.20) {
+    el.classList.add('brick-gold');
+    hp = 2;point = 30;
+} else if(rand < 0.35) {
+    el.classList.add('brick-hard');
+    hp = 2;point = 15;
+} else {
+    el.classList.add('brick-normal');
+}
+el.style.width = w + 'px';
+el.style.height = h + 'px';
+let posX = x * (w + gap) + 20;
+let posY = y * (h + gap) + 60;
+el.style.left = posX + 'px';
+el.style.top = posY + 'px';
+game.appendChild(el);
+bricks.push({
+el, posX, posY, w, h, hp, point, isBomb
+});
+}
+}
+}
+
+// 爆炸粒子
+function createParticles(x,y,color,count=8) {
+for(let i=0;i<count;i++){
+let p = document.createElement('div');
+p.className = 'particle';
+p.style.width = '6px';
+p.style.height = '6px';
+p.style.background = color;
+p.style.left = x + 'px';
+p.style.top = y + 'px';
+game.appendChild(p);
+let angle = (Math.PI*2/count)*i;
+let spd = 2 + Math.random()*3;
+particles.push({
+el:p, x,y, vx:Math.cos(angle)*spd, vy:Math.sin(angle)*spd, life:35
+})
+}
+}
+
+// 生成掉落道具
+function spawnProp(x,y) {
+if(Math.random()>0.28) return;
+const types = [
+    {key:'wide',text:'扩'},
+    {key:'fast',text:'速'},
+    {key:'life',text:'+1'},
+    {key:'slow',text:'慢'},
+    {key:'multiball',text:'分'},
+    {key:'pierce',text:'穿'},
+    {key:'shield',text:'盾'},
+    {key:'bombClear',text:'清'}
+];
+let idx = Math.floor(Math.random()*types.length);
+let t = types[idx];
+let el = document.createElement('div');
+el.className = 'prop prop-'+t.key;
+el.textContent = t.text;
+el.style.left = x+'px';
+el.style.top = y+'px';
+game.appendChild(el);
+props.push({el, x, y, type:t.key, speed:2.5});
+}
+
+// 道具下落更新
+function updateProps() {
+for(let i=props.length-1;i>=0;i--){
+let p = props[i];
+p.y += p.speed;
+p.el.style.top = p.y+'px';
+if(collide(p.el, paddle)) {
+applyProp(p.type);
+p.el.remove();
+props.splice(i,1);
+continue;
+}
+if(p.y>game.offsetHeight) {
+p.el.remove();
+props.splice(i,1);
+}
+}
+}
+
+// 道具效果逻辑
+function applyProp(type) {
+switch(type){
+case 'wide':
+paddleWidth = Math.min(160, paddleBaseWidth+40);
+paddle.style.width = paddleWidth+'px';
+setTimeout(()=>{
+    paddleWidth = paddleBaseWidth;
+    paddle.style.width = paddleWidth+'px';
+},8000);
+break;
+case 'fast':
+balls.forEach(b=>{
+    b.vx *= 1.15;b.vy *= 1.15;
+    limitBallSpeed(b);
+});
+break;
+case 'life':
+life++;lifeText.textContent = life;break;
+case 'slow':
+balls.forEach(b=>{
+    b.vx *= 0.75;b.vy *= 0.75;
+    limitBallSpeed(b);
+});
+break;
+case 'multiball':
+let temp = [...balls];
+temp.forEach(origin=>{
+    let ne = document.createElement('div');
+    ne.className = 'ball';
+    game.appendChild(ne);
+    balls.push({
+        el:ne,
+        x:origin.x,y:origin.y,
+        vx:-origin.vx,vy:origin.vy,
+        pierce:false
+    })
+});
+break;
+case 'pierce':
+balls.forEach(b=>{
+    b.pierce = true;
+    b.el.classList.add('ball-pierce');
+});
+setTimeout(()=>{
+    balls.forEach(b=>{
+        b.pierce=false;
+        b.el.classList.remove('ball-pierce');
+    })
+},7000);
+break;
+case 'shield':
+hasShield=true;
+shieldTip.style.display='block';
+setTimeout(()=>{hasShield=false;shieldTip.style.display='none'},10000);
+break;
+case 'bombClear':
+for(let i=bricks.length-1;i>=0;i--){
+    let b=bricks[i];
+    score+=b.point;
+    createParticles(b.posX+b.w/2,b.posY+b.h/2,'#ff8');
+    b.el.remove();bricks.splice(i,1);
+}
+scoreText.textContent=score;
+break;
+}
+}
+
+// 限制单颗球速度
+function limitBallSpeed(ball){
+ball.vx = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, ball.vx));
+ball.vy = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, ball.vy));
+}
+
+// 更新粒子生命周期
+function updateParticles() {
+for(let i=particles.length-1;i>=0;i--){
+let p = particles[i];
+p.x += p.vx; p.y += p.vy; p.life--;
+p.el.style.left = p.x+'px';
+p.el.style.top = p.y+'px';
+p.el.style.opacity = p.life/35;
+if(p.life<=0){
+    p.el.remove();
+    particles.splice(i,1);
+}
+}
+}
+
+// 碰撞检测
+function collide(a, b) {
+let ar = a.getBoundingClientRect();
+let br = b.getBoundingClientRect();
+return !(ar.right < br.left || ar.left > br.right || ar.bottom < br.top || ar.top > br.bottom);
+}
+
+// 炸弹砖爆炸，销毁周围砖块
+function bombExplode(centerX,centerY){
+let range = 90;
+for(let i=bricks.length-1;i>=0;i--){
+let b = bricks[i];
+let bx = b.posX+b.w/2;
+let by = b.posY+b.h/2;
+let dist = Math.hypot(bx-centerX,by-centerY);
+if(dist<range){
+    score += b.point;
+    createParticles(bx,by,'#f44',12);
+    b.el.remove();bricks.splice(i,1);
+}
+}
+updateScore();
+}
+
+// ====== 修复：精确判断碰撞方向，解决从上撞击砖块不掉、穿模 ======
+function handleBrickCollision(ball, brick) {
+    const ballW = 14;
+    const ballH = 14;
+    const ballCenterX = ball.x + ballW / 2;
+    const ballCenterY = ball.y + ballH / 2;
+    const brickCenterX = brick.posX + brick.w / 2;
+    const brickCenterY = brick.posY + brick.h / 2;
+
+    // 计算重叠距离
+    const overlapX = Math.min(ball.x + ballW, brick.posX + brick.w) - Math.max(ball.x, brick.posX);
+    const overlapY = Math.min(ball.y + ballH, brick.posY + brick.h) - Math.max(ball.y, brick.posY);
+
+    // 水平碰撞优先反转X，垂直碰撞反转Y
+    if (overlapX < overlapY) {
+        ball.vx = -ball.vx;
+        // 修正位置防止嵌入
+        if (ballCenterX < brickCenterX) ball.x -= overlapX;
+        else ball.x += overlapX;
+    } else {
+        ball.vy = -ball.vy;
+        if (ballCenterY < brickCenterY) ball.y -= overlapY;
+        else ball.y += overlapY;
+    }
+    limitBallSpeed(ball);
+}
+
+// 主游戏循环
+function loop() {
+if(isPaused) return;
+if (life <= 0) {gameOver.style.display = 'block';return;}
+// 修复2：逆序遍历数组，删除元素不会跳过砖块，不会提前清空数组触发通关
+if (bricks.length === 0) {win.style.display = 'block';return;}
+
+// 更新每一颗球
+for(let bi=balls.length-1;bi>=0;bi--){
+let ball = balls[bi];
+// 球静止待命不移动
+if(ball.vx===0&&ball.vy===0) continue;
+
+ball.x += ball.vx;
+ball.y += ball.vy;
+ball.el.style.left = ball.x+'px';
+ball.el.style.top = ball.y+'px';
+
+// 左右墙反弹
+if (ball.x <= 0 || ball.x >= game.offsetWidth -14) {
+ball.vx *= -1; limitBallSpeed(ball);
+}
+// 顶墙反弹
+if (ball.y <= 0) {
+ball.vy *= -1; limitBallSpeed(ball);
+}
+
+// 球掉落底部
+if (ball.y >= game.offsetHeight) {
+ball.el.remove();
+balls.splice(bi,1);
+// 所有球都掉光才扣命
+if(balls.length===0){
+    life--;lifeText.textContent=life;
+    initFirstBall();resetAllBalls();
+    balls[0].vx=0;balls[0].vy=0;
+}
+continue;
+}
+
+// 挡板碰撞
+if (collide(ball.el, paddle) && ball.vy > 0) {
+ball.vy *= -1;
+let hitPos = (ball.x - paddle.offsetLeft) / paddleWidth - 0.5;
+ball.vx = hitPos * 9;
+limitBallSpeed(ball);
+}
+
+// 砖块碰撞【逆序遍历修复提前通关+精准碰撞修复穿模】
+let hitOne = false;
+for(let i=bricks.length-1;i>=0;i--){
+let b = bricks[i];
+if(collide(ball.el, b.el)){
+    if(!ball.pierce){
+        handleBrickCollision(ball, b);
+    }
+    b.hp--;
+    if(b.hp <= 0) {
+        score += b.point;
+        updateScore();
+        createParticles(b.posX+b.w/2, b.posY+b.h/2, b.isBomb?'#f44':'#59f997');
+        spawnProp(b.posX+b.w/2, b.posY);
+        if(b.isBomb) bombExplode(b.posX+b.w/2,b.posY+b.h/2);
+        b.el.remove();
+        bricks.splice(i,1);
+    } else {
+        b.el.style.opacity = '0.6';
+    }
+    if(!ball.pierce){
+        hitOne = true;
+        break;
+    }
+}
+}
+}
+
+updateProps();
+updateParticles();
+requestAnimationFrame(loop);
+}
+
+// 更新分数
+function updateScore() {
+    scoreText.textContent = score;
+    if (score > highScore) {
+        highScore = score;
+        highScoreText.textContent = highScore;
+        localStorage.setItem('breakoutHighScore', highScore.toString());
+    }
+}
+
+// 全局重启游戏
+function restart() {
+score = 0;life = 3;level = 1;
+hasShield=false;shieldTip.style.display='none';
+paddleWidth = paddleBaseWidth;
+paddle.style.width = paddleWidth+'px';
+props.forEach(p=>p.el.remove());
+particles.forEach(p=>p.el.remove());
+balls.forEach(b=>b.el.remove());
+props = [];particles = [];balls=[];
+scoreText.innerText = 0;lifeText.innerText = 3;levelText.innerText = 1;
+gameOver.style.display = 'none';win.style.display = 'none';
+pausePanel.style.display = 'none';pauseTip.style.display = 'none';
+isPaused = false;
+initFirstBall();createBricks();
+loop();
+}
+
+// 下一关
+function nextLevel() {
+level++;levelText.innerText = level;
+paddleWidth = paddleBaseWidth;
+paddle.style.width = paddleWidth+'px';
+props.forEach(p=>p.el.remove());props = [];
+win.style.display = 'none';
+balls.forEach(b=>{b.vx=0;b.vy=0;});
+resetAllBalls();
+createBricks();loop();
+}
+
+// 初始化启动
+initFirstBall();
+createBricks();
+loop();
+</script>
+</body>
+</html>

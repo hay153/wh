@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>拼图小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 20px 40px 20px;
+            touch-action: none;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        h1 {
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            font-size: 2rem;
+            user-select: none;
+        }
+
+        .game-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            max-width: 1200px;
+            width: 100%;
+            align-items: flex-start;
+        }
+
+        .reference-section {
+            flex-shrink: 0;
+        }
+
+        .reference-title {
+            color: #fff;
+            font-size: 1rem;
+            margin-bottom: 10px;
+            text-align: center;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-left: 50%;
+            transform: translateX(-50%);
+            user-select: none;
+        }
+
+        .reference-image {
+            width: 200px;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            border: 4px solid rgba(255,255,255,0.5);
+        }
+
+        .game-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .control-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #fff;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.3);
+            user-select: none;
+        }
+
+        .control-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .control-btn.active {
+            background: rgba(255,255,255,0.5);
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            color: #fff;
+            font-size: 1rem;
+        }
+
+        .stat-item {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            user-select: none;
+        }
+
+        .stat-label {
+            font-weight: 600;
+        }
+
+        .puzzle-board {
+            position: relative;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.2);
+            overflow: visible;
+            touch-action: none;
+        }
+
+        .puzzle-slot {
+            position: absolute;
+            border: 1px dashed rgba(255,255,255,0.3);
+            background: rgba(0,0,0,0.1);
+            z-index: 1;
+        }
+
+        .puzzle-piece {
+            position: absolute;
+            cursor: grab;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            will-change: transform;
+            backface-visibility: hidden;
+            transform-style: preserve-3d;
+            transition: transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.2s ease;
+        }
+
+        .puzzle-piece:hover:not(.snapped) {
+            box-shadow: 0 6px 20px rgba(0,191,255,0.4);
+            filter: brightness(1.05);
+        }
+
+        .puzzle-piece:active:not(.snapped) {
+            cursor: grabbing;
+            transform: scale(1.08);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+        }
+
+        .puzzle-piece.dragging {
+            opacity: 0.95;
+            filter: brightness(1.15) saturate(1.1);
+            transition: none;
+        }
+
+        .puzzle-piece.snapped {
+            cursor: default;
+            box-shadow: 0 0 0 3px rgba(0,255,128,0.6);
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .puzzle-piece.snapped:active {
+            cursor: default;
+            transform: none;
+            box-shadow: 0 0 0 3px rgba(0,255,128,0.6);
+        }
+
+        .puzzle-piece.magnetized {
+            box-shadow: 0 0 0 2px rgba(0,191,255,0.5), 0 8px 24px rgba(0,191,255,0.3);
+        }
+
+        .success-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+        }
+
+        .success-modal.show {
+            display: flex;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .success-content {
+            background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+            padding: 50px 70px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
+            animation: slideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            max-width: 90%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .success-content::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(102,126,234,0.1) 0%, transparent 70%);
+            animation: rotate 10s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .success-content h2 {
+            color: #667eea;
+            font-size: 3rem;
+            margin-bottom: 25px;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(102,126,234,0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .success-content .congrats-text {
+            color: #555;
+            font-size: 1.3rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+            position: relative;
+            z-index: 1;
+        }
+
+        .success-content p {
+            color: #666;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .success-content .final-stats {
+            margin: 25px 0;
+            padding: 25px;
+            background: linear-gradient(135deg, rgba(102,126,234,0.15) 0%, rgba(118,75,162,0.15) 100%);
+            border-radius: 16px;
+            border: 2px solid rgba(102,126,234,0.2);
+            position: relative;
+            z-index: 1;
+        }
+
+        .success-content .final-stats .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(102,126,234,0.1);
+        }
+
+        .success-content .final-stats .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .success-content .final-stats .stat-label {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .success-content .final-stats .stat-value {
+            color: #764ba2;
+            font-weight: 700;
+            font-size: 1.3rem;
+        }
+
+        .success-content .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .success-content .close-btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #667eea;
+            background: rgba(102,126,234,0.1);
+            border: 2px solid rgba(102,126,234,0.3);
+        }
+
+        .success-content .close-btn:hover {
+            background: rgba(102,126,234,0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102,126,234,0.3);
+        }
+
+        .success-content .play-btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: 2px solid transparent;
+        }
+
+        .success-content .play-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102,126,234,0.4);
+        }
+
+        .celebration {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #ff6b6b;
+            animation: fall linear infinite;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { 
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-10vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(110vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .toggle-group {
+            display: flex;
+            gap: 5px;
+        }
+
+        .toggle-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            user-select: none;
+        }
+
+        .toggle-btn:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        .toggle-btn.active {
+            background: rgba(0,255,128,0.5);
+            box-shadow: 0 0 0 2px rgba(0,255,255,0.3);
+        }
+
+        .image-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+            max-width: 500px;
+        }
+
+        .image-option {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 3px solid transparent;
+            object-fit: cover;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            user-select: none;
+        }
+
+        .image-option:hover {
+            transform: scale(1.1);
+            border-color: rgba(255,255,255,0.5);
+        }
+
+        .image-option.active {
+            border-color: #00ff80;
+            box-shadow: 0 0 0 3px rgba(0,255,128,0.3);
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .game-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .reference-image {
+                width: 150px;
+                height: 150px;
+            }
+
+            .controls {
+                flex-direction: column;
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .control-btn {
+                width: 100%;
+            }
+
+            .stats {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .success-content {
+                padding: 40px 50px;
+            }
+
+            .success-content h2 {
+                font-size: 2.5rem;
+            }
+
+            .success-content .congrats-text {
+                font-size: 1.2rem;
+            }
+
+            .success-content .modal-buttons {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px 10px 30px 10px;
+            }
+
+            h1 {
+                font-size: 1.3rem;
+                margin-bottom: 15px;
+            }
+
+            .reference-image {
+                width: 120px;
+                height: 120px;
+            }
+
+            .game-container {
+                gap: 20px;
+            }
+
+            .success-content {
+                padding: 30px 40px;
+            }
+
+            .success-content h2 {
+                font-size: 2rem;
+            }
+
+            .success-content .congrats-text {
+                font-size: 1.1rem;
+            }
+
+            .success-content .final-stats {
+                padding: 20px;
+            }
+
+            .success-content .modal-buttons {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .success-content .close-btn,
+            .success-content .play-btn {
+                padding: 10px 25px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>🧩 拼图小游戏</h1>
+    
+    <div class="game-container">
+        <div class="reference-section">
+            <div class="reference-title">参考图片</div>
+            <img id="reference-img" class="reference-image" src="风景.webp" alt="风景">
+        </div>
+
+        <div class="game-section">
+            <div class="image-selector" id="image-selector">
+                <img class="image-option active" src="https://xx123-1447775308.cos.ap-guangzhou.myqcloud.com/%E9%A3%8E%E6%99%AF.webp?q-sign-algorithm=sha1&q-ak=AKIDk5kKr2MHp9FITNyPRj_OtXWsX2imSQFxpFezmhHvPLVDc5aAWhFiywFiCGtUDuPg&q-sign-time=1782533024;1782536624&q-key-time=1782533024;1782536624&q-header-list=host&q-url-param-list=&q-signature=1f21276f264d95f45c43a911afab16f0a8341c00&x-cos-security-token=w0i6GQVTAG08K7fSmiC73jlCJxlx1w1a8fbd393abf1feec6ed3d22ec0101f8bdXWvTPYSOutnDmHZQEU9DUqk-0EQ1ZTgxBQAG3Ip3HgWMRW94E2nmIEeaUFdSWZE_96xI1KdXbfoufndDH-g-eQE6pjycArrSXynd4Z1gkxQ0VFQuWhlXl3hkh17fc063CH96Fjw2PBy9gHzTZwuWVVUtf7sC7RlNsbV8GcIT-NgzYv0j9FetxROEsJFIoP4Dw-z_xTbH9-RGZOmnQNO64dwFjwSjnRfyg59aUMjNs_zqhH2uRRDw7OvnogzehzssTGw3jq1I9G8JFMF3tnqYkQ&" alt="风景" onclick="changeImage(this)">
+                <img class="image-option" src="https://xx123-1447775308.cos.ap-guangzhou.myqcloud.com/%E5%B1%B1.webp?q-sign-algorithm=sha1&q-ak=AKIDk38pIDucM268XyiGblQLHjz805wJLO9VOqMlQV5ja6S-fKYOq1iuhaHzdcmvuYbn&q-sign-time=1782533071;1782536671&q-key-time=1782533071;1782536671&q-header-list=host&q-url-param-list=&q-signature=763172a52281d4ad2a10804fb91138b3eb956407&x-cos-security-token=w0i6GQVTAG08K7fSmiC73jlCJxlx1w1a1a6933effa91135c9582511d01b57703XWvTPYSOutnDmHZQEU9DUnGTeXk1JGoS-zwfRaar48lp_2MfZWbK1-63t-tXa75fMhxfovcD3BlsVjq2zET7CtF7EEGtX8tEKJds5PwngDbaracxmiWC1wbMRowkUnag1opzZvtODWHQ6zPRU8TJQmmr_cpyibLGf7JG9HP9_zKtxNYUYUxvzFcxuk7SVnfljA-vi7X0ZXBpCuncw_MZ4ehloLR8-dAOBkMpZX6BoJGfttuDmUYtzYbEo8zCfCfUMcN8AUy1B8qLDrKEKEnQ5Q&" alt="山" onclick="changeImage(this)">
+                <img class="image-option" src="https://xx123-1447775308.cos.ap-guangzhou.myqcloud.com/%E5%B0%8F%E7%8C%AB%E5%A4%A7%E5%A4%B4%E7%85%A7.jpg?q-sign-algorithm=sha1&q-ak=AKIDlzs09Upfd37Q0IjLsrwOY9ksaxGgY3kJ2L_SwL-hyA96m9u4JqesYmL4l2YIxO18&q-sign-time=1782533097;1782536697&q-key-time=1782533097;1782536697&q-header-list=host&q-url-param-list=&q-signature=07bf76330271d404751cc2668f90dd70060d804d&x-cos-security-token=w0i6GQVTAG08K7fSmiC73jlCJxlx1w1acfed82de510ab0699254c2c39d4a9716XWvTPYSOutnDmHZQEU9DUs-NqO-B61RHVTPD3l7DdEZ3mnSbSbwYYl-MyxYLi5QWkp8vYmZ1j7V5SX56LlZOlxDzbgL75QdfxQYIBIQ5_ZuRKGC4XmHgIOZorMowpfP7P-j1eIWZY8LsN7IuNbo75_nVaKcsATW54cNo5dSNEbOjrBZ06ArVszx4FwZEk30zoEHFbGHVdzhHhjy_raJkhDmFddMAeFOfOIP8JTQF6p5jFVfiy84n2P9-j7ny6mrgJKDEGAiwsF2auHCQE36O7g&" alt="小猫" onclick="changeImage(this)">
+                <img class="image-option" src="https://xx123-1447775308.cos.ap-guangzhou.myqcloud.com/%E5%B0%8F%E7%8C%AB%E5%B0%8F%E7%8B%97.webp?q-sign-algorithm=sha1&q-ak=AKIDvs_ljQo6bc6wCJe2RhobWytoDID1TGXXfPVDPt9fG2NfMOGnR_UJZMjoljKANUvf&q-sign-time=1782533124;1782536724&q-key-time=1782533124;1782536724&q-header-list=host&q-url-param-list=&q-signature=ddc292a734ee90d64e851c85459346fd3009211e&x-cos-security-token=w0i6GQVTAG08K7fSmiC73jlCJxlx1w1af744c249662ec9f731148f7a26a2fcb3XWvTPYSOutnDmHZQEU9DUgtM9IRjFgT6gL60vmlvyYI9ZvI9LpearcidzZAqlzRdUyoTAH4M_D1s2PXoH7UxOpkdVnVKsWb-RicB3RZW9qMzDxAKflz09Vx28xn95nYxoPgD4OH6EEbQiLEXBDYvDzUwZy_BOGqN5A-QEjE_yfP491tjQzyYJO4B4Gt10CTQBx0cJgdO78cv6nj_ErRajlHKevGMKTKGzbsmb_h7Cj9ThZBxGTKNYf85CNXBQ6fHwdCcqp0I74jUN8yJPnPN-w&" alt="小猫小狗" onclick="changeImage(this)">
+                <img class="image-option" src="https://xx123-1447775308.cos.ap-guangzhou.myqcloud.com/%E9%87%91%E6%AF%9B.jpeg?q-sign-algorithm=sha1&q-ak=AKIDI0bOSiZ-0J4IANltPAEGwHOGLd3BP2ldXcL7x7SjAZogsDyWNecNW-dJP60bYBFt&q-sign-time=1782533146;1782536746&q-key-time=1782533146;1782536746&q-header-list=host&q-url-param-list=&q-signature=17183258212fc1eeea87a205e5cb1e43fb4077f5&x-cos-security-token=w0i6GQVTAG08K7fSmiC73jlCJxlx1w1abc14e309cf6fe017c03d4bb2ea9bb62fXWvTPYSOutnDmHZQEU9DUqBghHEpwWCkdH51aDbUTk_LdC3_5WL48KF-CmYzRAw6aSAHWGx4x7YfiZKXLp0KEyQGU-jWt95XKXV1JgOMHO7kowjWiMaOVOzK0QnsaIrJIya50LrEbGA2rfDc7Wp_djXrLUm1FRZLO2uWNSNxptyo6RGDp-fX92Euhi4IAY5swTXr_NUPcaPYsJvU9zy_RnoxJR3LFqNfIN6b-vw7kYkyNkql7qjvP3efxwaCxf-gCSMZzyxzh-XXJpx_T7bJdA&" alt="金毛" onclick="changeImage(this)">
+                <img class="image-option" src="https://xx123-1447775308.cos.ap-guangzhou.myqcloud.com/%E5%B0%8F%E7%8B%97.jpeg?q-sign-algorithm=sha1&q-ak=AKIDallmX3sTGO5q_c_PPRj3PRqZMyHA4YYVEygn7xqh0x0Wj7BgXg5dV-X6qtS8_3Cl&q-sign-time=1782533173;1782536773&q-key-time=1782533173;1782536773&q-header-list=host&q-url-param-list=&q-signature=b180703aea66d0deb14f5231c230e52d8318ba72&x-cos-security-token=w0i6GQVTAG08K7fSmiC73jlCJxlx1w1ac4d6d35cb7ee6e57448bacbbb1b510d2XWvTPYSOutnDmHZQEU9DUvSkVmOH_kJaXVLs2Cf-j7sHPtTayzyHmNMx9GBCAEaeKpxunk1TMsKrkRgdLXU8PXJSrTEALSgPZq6O1D7KbEEqM_p1MJc8u6aF48Zv8cMTGLgeLKy_aep7MZxWSAYDtYVqHCX91nZtQAxqHZuK0m2wM2zhQRsmEyjuqX30XN7ZRN78sUou-nvmSAPxsVc7sMaDXeyY2ZD5wlXE1BDVuETidXA62_Iw_w3BzykUNUtxWXt5Wmr8QDpssb21plR-VA&" alt="小狗" onclick="changeImage(this)">
+            </div>
+            <div class="controls">
+                <div class="toggle-group">
+                    <button class="control-btn active" onclick="setDifficulty(2)">简单 (2×2)</button>
+                    <button class="control-btn" onclick="setDifficulty(4)">中等 (4×4)</button>
+                    <button class="control-btn" onclick="setDifficulty(6)">困难 (6×6)</button>
+                </div>
+                <button class="control-btn" onclick="restartGame()">🔄 重新开始</button>
+                <div class="toggle-group">
+                    <button class="toggle-btn active" onclick="toggleTimer()">⏱️ 计时</button>
+                    <button class="toggle-btn active" onclick="toggleMoves()">👣 步数</button>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-label">时间:</span> <span id="timer">00:00</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">步数:</span> <span id="moves">0</span>
+                </div>
+            </div>
+
+            <div id="puzzle-board" class="puzzle-board"></div>
+        </div>
+    </div>
+
+    <div id="success-modal" class="success-modal">
+        <div class="success-content">
+            <h2>🎉 恭喜完成！</h2>
+            <p class="congrats-text">太棒了！你成功完成了拼图挑战！<br>你的表现非常出色，继续加油！</p>
+            <div class="final-stats">
+                <div class="stat-row">
+                    <span class="stat-label">⏱️ 完成用时</span>
+                    <span class="stat-value" id="final-time">00:00</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">👣 移动步数</span>
+                    <span class="stat-value" id="final-moves">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">🎯 难度等级</span>
+                    <span class="stat-value" id="final-difficulty">简单</span>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="close-btn" onclick="closeModal()">✖️ 关闭</button>
+                <button class="play-btn" onclick="closeModal(); restartGame();">🔄 再玩一次</button>
+            </div>
+        </div>
+        <div class="celebration" id="celebration"></div>
+    </div>
+
+    <script>
+        const puzzleBoard = document.getElementById('puzzle-board');
+        const referenceImg = document.getElementById('reference-img');
+        const timerDisplay = document.getElementById('timer');
+        const movesDisplay = document.getElementById('moves');
+        const successModal = document.getElementById('success-modal');
+        const finalTimeDisplay = document.getElementById('final-time');
+        const finalMovesDisplay = document.getElementById('final-moves');
+        const finalDifficultyDisplay = document.getElementById('final-difficulty');
+        const celebration = document.getElementById('celebration');
+
+        let difficulty = 2;
+        let pieceSize = 0;
+        let boardSize = 400;
+        let pieces = [];
+        let slots = [];
+        let moves = 0;
+        let timerInterval = null;
+        let seconds = 0;
+        let timerEnabled = true;
+        let movesEnabled = true;
+        let isPlaying = false;
+
+        const SNAP_THRESHOLD = 30;
+        const MAGNET_THRESHOLD = 25;
+        const MAGNET_STRENGTH = 0.3;
+
+        let zIndexCounter = 10;
+
+        let dragPiece = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let currentDragX = 0;
+        let currentDragY = 0;
+        let isAnimating = false;
+
+        function bringToFront(piece) {
+            zIndexCounter++;
+            piece.element.style.zIndex = zIndexCounter;
+        }
+
+        function resetZIndexes() {
+            zIndexCounter = 10;
+            pieces.forEach(piece => {
+                if (!piece.snapped) {
+                    piece.element.style.zIndex = zIndexCounter;
+                }
+            });
+        }
+
+        function initGame() {
+            stopTimer();
+            resetStats();
+            pieces = [];
+            slots = [];
+            puzzleBoard.innerHTML = '';
+            isPlaying = false;
+
+            const headerHeight = 70;
+            const controlsHeight = 160;
+            const statsHeight = 40;
+            const padding = 40;
+            const availableHeight = window.innerHeight - headerHeight - controlsHeight - statsHeight - padding;
+
+            boardSize = Math.min(680, window.innerWidth - 30, availableHeight);
+            if (window.innerWidth < 768) {
+                boardSize = Math.min(520, window.innerWidth - 20, availableHeight);
+            }
+            if (window.innerWidth < 480) {
+                boardSize = Math.min(400, window.innerWidth - 10, availableHeight);
+            }
+
+            boardSize = Math.max(boardSize, 280);
+
+            pieceSize = boardSize / difficulty;
+
+            puzzleBoard.style.width = `${boardSize}px`;
+            puzzleBoard.style.height = `${boardSize}px`;
+
+            createSlots();
+            createPieces();
+            shufflePieces();
+
+            puzzleBoard.addEventListener('mousedown', handleBoardClick);
+
+            isPlaying = true;
+            startTimer();
+        }
+
+        function handleBoardClick(e) {
+            if (!isPlaying || dragPiece) return;
+
+            const rect = puzzleBoard.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            const piecesAtClick = pieces
+                .filter(p => !p.snapped)
+                .filter(p => {
+                    const px = p.x;
+                    const py = p.y;
+                    return clickX >= px && clickX <= px + pieceSize &&
+                           clickY >= py && clickY <= py + pieceSize;
+                })
+                .sort((a, b) => {
+                    const zA = parseInt(a.element.style.zIndex) || 10;
+                    const zB = parseInt(b.element.style.zIndex) || 10;
+                    return zA - zB;
+                });
+
+            if (piecesAtClick.length > 0) {
+                const bottomPiece = piecesAtClick[0];
+                bringToFront(bottomPiece);
+            }
+        }
+
+        function createSlots() {
+            for (let row = 0; row < difficulty; row++) {
+                for (let col = 0; col < difficulty; col++) {
+                    const slot = document.createElement('div');
+                    slot.className = 'puzzle-slot';
+                    slot.style.width = `${pieceSize}px`;
+                    slot.style.height = `${pieceSize}px`;
+                    slot.style.left = `${col * pieceSize}px`;
+                    slot.style.top = `${row * pieceSize}px`;
+                    slot.dataset.row = row;
+                    slot.dataset.col = col;
+                    puzzleBoard.appendChild(slot);
+                    slots.push({ row, col, element: slot });
+                }
+            }
+        }
+
+        function createPieces() {
+            const imgSrc = referenceImg.src;
+            
+            for (let row = 0; row < difficulty; row++) {
+                for (let col = 0; col < difficulty; col++) {
+                    const piece = document.createElement('div');
+                    piece.className = 'puzzle-piece';
+                    piece.style.width = `${pieceSize}px`;
+                    piece.style.height = `${pieceSize}px`;
+                    piece.style.backgroundImage = `url(${imgSrc})`;
+                    piece.style.backgroundSize = `${boardSize}px ${boardSize}px`;
+                    piece.style.backgroundPosition = `-${col * pieceSize}px -${row * pieceSize}px`;
+                    piece.dataset.row = row;
+                    piece.dataset.col = col;
+                    
+                    piece.addEventListener('mousedown', handleStart);
+                    piece.addEventListener('touchstart', handleStart, { passive: false });
+                    
+                    puzzleBoard.appendChild(piece);
+                    pieces.push({
+                        row,
+                        col,
+                        currentRow: row,
+                        currentCol: col,
+                        x: col * pieceSize,
+                        y: row * pieceSize,
+                        element: piece,
+                        snapped: false
+                    });
+                }
+            }
+        }
+
+        function shufflePieces() {
+            const positions = [];
+            for (let i = 0; i < difficulty * difficulty; i++) {
+                positions.push(i);
+            }
+
+            for (let i = positions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [positions[i], positions[j]] = [positions[j], positions[i]];
+            }
+
+            let allCorrect = true;
+            pieces.forEach((piece, index) => {
+                const newPos = positions[index];
+                const newRow = Math.floor(newPos / difficulty);
+                const newCol = newPos % difficulty;
+
+                if (newRow !== piece.row || newCol !== piece.col) {
+                    allCorrect = false;
+                }
+
+                piece.currentRow = newRow;
+                piece.currentCol = newCol;
+                piece.x = newCol * pieceSize;
+                piece.y = newRow * pieceSize;
+                piece.snapped = false;
+                piece.element.classList.remove('snapped', 'magnetized');
+                piece.element.style.zIndex = 10 + index;
+
+                setPieceTransform(piece, piece.x, piece.y);
+            });
+
+            zIndexCounter = 10 + pieces.length;
+
+            if (allCorrect && difficulty > 1) {
+                shufflePieces();
+            }
+        }
+
+        function setPieceTransform(piece, x, y) {
+            piece.element.style.transform = `translate(${x}px, ${y}px)`;
+        }
+
+        function handleStart(e) {
+            if (!isPlaying) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const target = e.target;
+            const pieceData = pieces.find(p => p.element === target);
+
+            if (pieceData && !pieceData.snapped) {
+                dragPiece = pieceData;
+
+                const point = e.touches ? e.touches[0] : e;
+                const rect = puzzleBoard.getBoundingClientRect();
+
+                dragOffsetX = point.clientX - rect.left - pieceData.x;
+                dragOffsetY = point.clientY - rect.top - pieceData.y;
+
+                dragStartX = pieceData.x;
+                dragStartY = pieceData.y;
+                currentDragX = pieceData.x;
+                currentDragY = pieceData.y;
+
+                dragPiece.element.classList.add('dragging');
+                bringToFront(dragPiece);
+
+                document.addEventListener('mousemove', handleMove);
+                document.addEventListener('mouseup', handleEnd);
+                document.addEventListener('touchmove', handleMove, { passive: false });
+                document.addEventListener('touchend', handleEnd);
+
+                requestAnimationFrame(updateDrag);
+            }
+        }
+
+        function handleMove(e) {
+            if (!dragPiece) return;
+            
+            e.preventDefault();
+            
+            const point = e.touches ? e.touches[0] : e;
+            const rect = puzzleBoard.getBoundingClientRect();
+            
+            let targetX = point.clientX - rect.left - dragOffsetX;
+            let targetY = point.clientY - rect.top - dragOffsetY;
+            
+            const magnetResult = applyMagnetEffect(targetX, targetY);
+            targetX = magnetResult.x;
+            targetY = magnetResult.y;
+            
+            currentDragX = targetX;
+            currentDragY = targetY;
+        }
+
+        function applyMagnetEffect(x, y) {
+            let resultX = x;
+            let resultY = y;
+            
+            const correctX = dragPiece.col * pieceSize;
+            const correctY = dragPiece.row * pieceSize;
+            
+            const distToCorrect = Math.sqrt(
+                Math.pow(x - correctX, 2) + Math.pow(y - correctY, 2)
+            );
+            
+            if (distToCorrect < SNAP_THRESHOLD) {
+                const factor = 1 - (distToCorrect / SNAP_THRESHOLD);
+                resultX = x + (correctX - x) * factor * MAGNET_STRENGTH;
+                resultY = y + (correctY - y) * factor * MAGNET_STRENGTH;
+            }
+            
+            const snappedPieces = pieces.filter(p => p.snapped && p !== dragPiece);
+            for (const snappedPiece of snappedPieces) {
+                const neighborX = snappedPiece.currentCol * pieceSize;
+                const neighborY = snappedPiece.currentRow * pieceSize;
+                
+                const distToNeighbor = Math.sqrt(
+                    Math.pow(x - neighborX, 2) + Math.pow(y - neighborY, 2)
+                );
+                
+                if (distToNeighbor < MAGNET_THRESHOLD) {
+                    const factor = 1 - (distToNeighbor / MAGNET_THRESHOLD);
+                    resultX = x + (neighborX - x) * factor * MAGNET_STRENGTH * 0.5;
+                    resultY = y + (neighborY - y) * factor * MAGNET_STRENGTH * 0.5;
+                }
+            }
+            
+            const isNearCorrect = Math.abs(resultX - correctX) < SNAP_THRESHOLD && 
+                                Math.abs(resultY - correctY) < SNAP_THRESHOLD;
+            
+            if (isNearCorrect) {
+                dragPiece.element.classList.add('magnetized');
+            } else {
+                dragPiece.element.classList.remove('magnetized');
+            }
+            
+            return { x: resultX, y: resultY };
+        }
+
+        function updateDrag() {
+            if (dragPiece) {
+                setPieceTransform(dragPiece, currentDragX, currentDragY);
+                requestAnimationFrame(updateDrag);
+            }
+        }
+
+        function handleEnd(e) {
+            if (!dragPiece) return;
+
+            dragPiece.element.classList.remove('dragging', 'magnetized');
+
+            const correctX = dragPiece.col * pieceSize;
+            const correctY = dragPiece.row * pieceSize;
+
+            const distToCorrect = Math.sqrt(
+                Math.pow(currentDragX - correctX, 2) + Math.pow(currentDragY - correctY, 2)
+            );
+
+            if (distToCorrect < SNAP_THRESHOLD) {
+                animateToPosition(dragPiece, correctX, correctY);
+                dragPiece.currentRow = dragPiece.row;
+                dragPiece.currentCol = dragPiece.col;
+                dragPiece.x = correctX;
+                dragPiece.y = correctY;
+                dragPiece.snapped = true;
+                dragPiece.element.classList.add('snapped');
+                dragPiece.element.style.zIndex = 5;
+
+                if (movesEnabled) {
+                    moves++;
+                    movesDisplay.textContent = moves;
+                }
+
+                setTimeout(checkWin, 300);
+            } else {
+                const targetCol = Math.round(currentDragX / pieceSize);
+                const targetRow = Math.round(currentDragY / pieceSize);
+
+                if (targetCol >= 0 && targetCol < difficulty && targetRow >= 0 && targetRow < difficulty) {
+                    const targetPiece = pieces.find(
+                        p => p.currentRow === targetRow && p.currentCol === targetCol && p !== dragPiece
+                    );
+
+                    const targetX = targetCol * pieceSize;
+                    const targetY = targetRow * pieceSize;
+
+                    if (targetPiece) {
+                        animateToPosition(targetPiece, dragPiece.x, dragPiece.y);
+                        targetPiece.currentRow = dragPiece.currentRow;
+                        targetPiece.currentCol = dragPiece.currentCol;
+                        targetPiece.x = dragPiece.x;
+                        targetPiece.y = dragPiece.y;
+                        targetPiece.snapped = false;
+                        targetPiece.element.classList.remove('snapped');
+                        bringToFront(targetPiece);
+                    }
+
+                    animateToPosition(dragPiece, targetX, targetY);
+                    dragPiece.currentRow = targetRow;
+                    dragPiece.currentCol = targetCol;
+                    dragPiece.x = targetX;
+                    dragPiece.y = targetY;
+
+                    if (movesEnabled) {
+                        moves++;
+                        movesDisplay.textContent = moves;
+                    }
+                } else {
+                    animateToPosition(dragPiece, dragPiece.x, dragPiece.y);
+                }
+            }
+
+            dragPiece = null;
+
+            document.removeEventListener('mousemove', handleMove);
+            document.removeEventListener('mouseup', handleEnd);
+            document.removeEventListener('touchmove', handleMove);
+            document.removeEventListener('touchend', handleEnd);
+        }
+
+        function animateToPosition(piece, targetX, targetY) {
+            isAnimating = true;
+            const startX = piece.x;
+            const startY = piece.y;
+            const duration = 150;
+            const startTime = performance.now();
+            
+            function animate(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                const easeProgress = 1 - Math.pow(1 - progress, 3);
+                
+                const currentX = startX + (targetX - startX) * easeProgress;
+                const currentY = startY + (targetY - startY) * easeProgress;
+                
+                setPieceTransform(piece, currentX, currentY);
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    piece.x = targetX;
+                    piece.y = targetY;
+                    isAnimating = false;
+                }
+            }
+            
+            requestAnimationFrame(animate);
+        }
+
+        function checkWin() {
+            const allSnapped = pieces.every(p => p.snapped);
+            
+            if (allSnapped) {
+                isPlaying = false;
+                stopTimer();
+                setTimeout(showSuccess, 300);
+            }
+        }
+
+        function showSuccess() {
+            finalTimeDisplay.textContent = timerDisplay.textContent;
+            finalMovesDisplay.textContent = movesDisplay.textContent;
+
+            const difficultyNames = {
+                2: '简单 (2×2)',
+                4: '中等 (4×4)',
+                6: '困难 (6×6)'
+            };
+            finalDifficultyDisplay.textContent = difficultyNames[difficulty] || '未知';
+
+            successModal.classList.add('show');
+            createConfetti();
+        }
+
+        function closeModal() {
+            successModal.classList.remove('show');
+            celebration.innerHTML = '';
+        }
+
+        function createConfetti() {
+            const colors = ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff', '#5f27cd'];
+            
+            for (let i = 0; i < 60; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = `${Math.random() * 100}%`;
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDuration = `${3 + Math.random() * 2}s`;
+                confetti.style.animationDelay = `${Math.random() * 2}s`;
+                confetti.style.width = `${5 + Math.random() * 10}px`;
+                confetti.style.height = `${5 + Math.random() * 10}px`;
+                celebration.appendChild(confetti);
+            }
+        }
+
+        function startTimer() {
+            if (!timerEnabled) return;
+            
+            timerInterval = setInterval(() => {
+                seconds++;
+                const minutes = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function resetStats() {
+            moves = 0;
+            seconds = 0;
+            movesDisplay.textContent = '0';
+            timerDisplay.textContent = '00:00';
+        }
+
+        function setDifficulty(level) {
+            difficulty = level;
+            
+            document.querySelectorAll('.control-btn').forEach(btn => btn.classList.remove('active'));
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+            
+            initGame();
+        }
+
+        function restartGame() {
+            initGame();
+        }
+
+        function toggleTimer() {
+            timerEnabled = !timerEnabled;
+            if (event && event.target) {
+                event.target.classList.toggle('active');
+            }
+            
+            if (timerEnabled) {
+                timerDisplay.parentElement.style.opacity = 1;
+                if (isPlaying) startTimer();
+            } else {
+                timerDisplay.parentElement.style.opacity = 0.5;
+                stopTimer();
+            }
+        }
+
+        function toggleMoves() {
+            movesEnabled = !movesEnabled;
+            if (event && event.target) {
+                event.target.classList.toggle('active');
+            }
+            
+            if (movesEnabled) {
+                movesDisplay.parentElement.style.opacity = 1;
+            } else {
+                movesDisplay.parentElement.style.opacity = 0.5;
+            }
+        }
+
+        function changeImage(imgElement) {
+            document.querySelectorAll('.image-option').forEach(img => img.classList.remove('active'));
+            imgElement.classList.add('active');
+            
+            referenceImg.src = imgElement.src;
+            referenceImg.alt = imgElement.alt;
+        }
+
+        window.addEventListener('resize', () => {
+            initGame();
+        });
+
+        referenceImg.onload = () => {
+            initGame();
+        };
+
+        if (referenceImg.complete) {
+            initGame();
+        }
+    </script>
+</body>
+</html>
