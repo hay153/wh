@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>玩吧</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-box" class="game-box">
+        <div class="splash-screen">
+            <video class="splash-video" autoplay muted loop playsinline>
+                <source src="背景.mp4" type="video/mp4">
+            </video>
+            <div class="video-overlay"></div>
+            <div class="splash-content">
+                <button id="start-btn" class="start-btn">🎉 开始游戏 🎉</button>
+            </div>
+        </div>
+        
+        <div id="game-select" class="game-select hidden">
+            <div class="select-header">
+                <h2>🎀 选择游戏 🎀</h2>
+            </div>
+            <div class="game-grid">
+                <div class="game-card" data-game="racing">
+                    <div class="game-icon">🏎️</div>
+                    <h3>像素赛车</h3>
+                    <p>粘土风赛车闯关</p>
+                </div>
+                <div class="game-card" data-game="frog">
+                    <div class="game-icon">🐸</div>
+                    <h3>青蛙捕食</h3>
+                    <p>点击捕捉苍蝇</p>
+                </div>
+                <div class="game-card" data-game="doodle">
+                    <div class="game-icon">⬆️</div>
+                    <h3>涂鸦跳跃</h3>
+                    <p>色块向上跳跃</p>
+                </div>
+                <div class="game-card" data-game="puzzle">
+                    <div class="game-icon">🧩</div>
+                    <h3>拼图游戏</h3>
+                    <p>挑战拼图智慧</p>
+                </div>
+                <div class="game-card" data-game="catch">
+                    <div class="game-icon">🍰</div>
+                    <h3>接甜品</h3>
+                    <p>移动蛋糕接甜品</p>
+                </div>
+                <div class="game-card" data-game="schulte">
+                    <div class="game-icon">🔢</div>
+                    <h3>舒尔特方格</h3>
+                    <p>按顺序点击数字</p>
+                </div>
+                <div class="game-card" data-game="findcat">
+                    <div class="game-icon">🐱</div>
+                    <h3>找猫咪</h3>
+                    <p>找出目标猫咪</p>
+                </div>
+                <div class="game-card" data-game="breakout">
+                    <div class="game-icon">🎮</div>
+                    <h3>打砖块</h3>
+                    <p>经典打砖块游戏</p>
+                </div>
+                <div class="game-card" data-game="furball">
+                    <div class="game-icon">🧶</div>
+                    <h3>毛团日记</h3>
+                    <p>记录毛团的故事</p>
+                </div>
+                <div class="game-card" data-game="monster">
+                    <div class="game-icon">👾</div>
+                    <h3>小怪兽跑酷</h3>
+                    <p>跳跃躲避障碍</p>
+                </div>
+            </div>
+            <button id="back-btn" class="back-btn">返回</button>
+        </div>
+        
+        <div id="game-container" class="game-container hidden"></div>
+    </div>
+    
+    <script src="js/game-sounds.js"></script>
+    <script src="js/game-breakout.js"></script>
+    <script src="js/game-furball.js"></script>
+    <script src="js/game-monster.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
